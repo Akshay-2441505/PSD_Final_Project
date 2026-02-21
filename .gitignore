@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb
+
+# Virtual Environment
+venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Flutter
+frontend/.dart_tool/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/build/
+frontend/.packages
+frontend/pubspec.lock
+
+# Build artifacts
+*.apk
+*.aab
+build/
+dist/
+
+# Logs
+*.log
+
+# macOS
+.DS_Store
+
+# Extracted temp files
+prd_text.txt
+design_text.txt
+tech_text.txt
