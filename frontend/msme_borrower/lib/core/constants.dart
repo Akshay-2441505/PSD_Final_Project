@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 // ── API ───────────────────────────────────────────────────────────────────
-// For Android emulator: 10.0.2.2 maps to your localhost
-// For real device on same WiFi: use your machine's local IP e.g. 192.168.x.x
-const String kBaseUrl = 'http://10.0.2.2:8000';
+// Flutter Web → localhost | Android Emulator → 10.0.2.2
+import 'package:flutter/foundation.dart' show kIsWeb;
+String get kBaseUrl => kIsWeb ? 'http://localhost:8000' : 'http://10.0.2.2:8000';
 
 // ── Colors ────────────────────────────────────────────────────────────────
 const Color kPrimary       = Color(0xFF7C5CBF); // Soft Lilac/Purple

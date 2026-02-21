@@ -59,6 +59,14 @@ class ApiService {
     return _parse(r);
   }
 
+  /// Returns the currently-logged-in borrower's own profile.
+  /// The loan apply form reads annual_turnover + annual_profit from here
+  /// so the user never has to re-enter their financials each time.
+  Future<Map<String, dynamic>> getMyProfile(String token) async {
+    final r = await http.get(Uri.parse('$_base/auth/me'), headers: _headers(token));
+    return _parse(r);
+  }
+
   // ── HELPERS ──────────────────────────────────────────────────────────────
 
   Map<String, dynamic> _parse(http.Response r) {

@@ -20,6 +20,7 @@ class _LoanApplyScreenState extends State<LoanApplyScreen> {
   String _purpose  = 'WORKING_CAPITAL';
   bool   _loading  = false;
   bool   _aaFetch  = false;
+  bool   _profileLoaded = false; // true once financials auto-filled
 
   final List<Map<String,String>> _purposes = [
     {'value': 'WORKING_CAPITAL',   'label': 'Working Capital'},
@@ -51,7 +52,32 @@ class _LoanApplyScreenState extends State<LoanApplyScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    // Fetch stored profile financials to auto-fill the form
+    WidgetsBinding.instance.addPostFrameCallback((_) => _prefillFromProfile());
+  }
+
+  /// Reads the borrower's stored annual_turnover & annual_profit from their profile
+  /// (set during registration) and pre-fills the form. The user can still edit.
+  Future<void> _prefillFromProfile() async {
+    try {
+      final token = context.read<AuthProvider>().token!;
+      final profile = await _api.getMyProfile(token);
+      if (!mounted) return;
+      final turnover = profile['annual_turnover'];
+      final profit   = profile['annual_profit'];
+      setState(() {
+        if (turnover != null) _turnoverCtrl.text = turnover.toString();
+        if (profit   != null) _profitCtrl.text   = profit.toString();
+        _profileLoaded = (turnover != null);
+      });
+    } catch (_) {} // silent — user can always fill manually
+  }
+
+  @override
   void dispose() { _turnoverCtrl.dispose(); _profitCtrl.dispose(); super.dispose(); }
+
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -148,7 +174,23 @@ class _LoanApplyScreenState extends State<LoanApplyScreen> {
 
           // ── Financial Declaration ──────────────────────────────────
           _Card(children: [
-            _Label('Business Financials (Annual)'),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              _Label('Business Financials (Annual)'),
+              if (_profileLoaded)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(color: kSuccess.withOpacity(0.12), borderRadius: BorderRadius.circular(12)),
+                  child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.check_circle, color: kSuccess, size: 12),
+                    SizedBox(width: 4),
+                    Text('Auto-filled from profile', style: TextStyle(fontSize: 10, color: kSuccess)),
+                  ]),
+                ),
+            ]),
+            const SizedBox(height: 4),
+            if (_profileLoaded)
+              const Text('Values saved from your profile. Tap to edit if changed.',
+                  style: TextStyle(fontSize: 11, color: kTextMuted)),
             const SizedBox(height: 12),
             TextFormField(
               controller: _turnoverCtrl,

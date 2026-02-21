@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import hash_password, verify_password, create_access_token
+from app.core.dependencies import get_current_borrower
 from app.models.models import BorrowerProfile, AdminUser
 from app.schemas.schemas import (
     BorrowerRegisterRequest, BorrowerLoginRequest, AdminLoginRequest,
@@ -48,6 +49,17 @@ def login_borrower(payload: BorrowerLoginRequest, db: Session = Depends(get_db))
 
     token = create_access_token({"sub": borrower.email, "role": "borrower", "id": str(borrower.business_id)})
     return TokenResponse(access_token=token, role="borrower")
+
+
+# ── GET /auth/me ──────────────────────────────────────────────────────────
+@router.get("/me", response_model=BorrowerProfileResponse)
+def get_my_profile(borrower: BorrowerProfile = Depends(get_current_borrower)):
+    """
+    Returns the logged-in borrower's profile.
+    Used by the Flutter app to pre-fill annual financials on the loan form,
+    so the user never has to re-enter turnover/profit for each application.
+    """
+    return borrower
 
 
 # ── POST /auth/admin/login ────────────────────────────────────────────────

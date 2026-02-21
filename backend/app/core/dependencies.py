@@ -1,20 +1,24 @@
 """
 dependencies.py — Reusable FastAPI dependency injectors for auth guards.
 """
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, status, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from uuid import UUID
 
 from app.core.database import get_db
 from app.core.security import decode_access_token
 from app.models.models import BorrowerProfile, AdminUser
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+# HTTPBearer gives Swagger a clean "Value:" token input box
+# instead of the confusing OAuth2 username/password form
+bearer_scheme = HTTPBearer(auto_error=True)
+
+def _extract_token(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> str:
+    return credentials.credentials
 
 
 def get_current_borrower(
-    token: str = Depends(oauth2_scheme),
+    token: str = Depends(_extract_token),
     db: Session = Depends(get_db),
 ) -> BorrowerProfile:
     payload = decode_access_token(token)
@@ -29,7 +33,7 @@ def get_current_borrower(
 
 
 def get_current_admin(
-    token: str = Depends(oauth2_scheme),
+    token: str = Depends(_extract_token),
     db: Session = Depends(get_db),
 ) -> AdminUser:
     payload = decode_access_token(token)
