@@ -32,6 +32,8 @@ def register_borrower(payload: BorrowerRegisterRequest, db: Session = Depends(ge
         hashed_password=hash_password(payload.password),
         gstin=payload.gstin,
         business_type=payload.business_type,
+        annual_turnover=payload.annual_turnover,
+        annual_profit=payload.annual_profit,
     )
     db.add(borrower)
     db.commit()

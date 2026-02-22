@@ -12,14 +12,17 @@ class ApplicationDetailScreen extends StatefulWidget {
 }
 
 class _State extends State<ApplicationDetailScreen> {
-  final _api = AdminApiService();
+  final _api         = AdminApiService();
+  final _remarksCtrl = TextEditingController();
   Map<String, dynamic>? _detail;
   Map<String, dynamic>? _expenseData;
   Map<String, dynamic>? _revenueData;
-  bool _loading = true;
+  bool _loading        = true;
+  bool _submitting     = false;
 
-  @override
-  void initState() { super.initState(); _load(); }
+  @override void initState() { super.initState(); _load(); }
+
+  @override void dispose() { _remarksCtrl.dispose(); super.dispose(); }
 
   Future<void> _load() async {
     final token = context.read<AdminAuthProvider>().token!;
@@ -30,214 +33,295 @@ class _State extends State<ApplicationDetailScreen> {
         _api.getExpenseChart(token, appId),
         _api.getRevenueChart(token, appId),
       ]);
-      setState(() {
+      if (mounted) setState(() {
         _detail      = results[0];
         _expenseData = results[1];
         _revenueData = results[2];
-        _loading = false;
+        _loading     = false;
+        // Pre-fill remarks if already set
+        _remarksCtrl.text = results[0]['admin_remarks'] ?? '';
       });
-    } catch (_) { setState(() => _loading = false); }
+    } catch (_) { if (mounted) setState(() => _loading = false); }
   }
 
-  Future<void> _showDecisionDialog(String decision) async {
-    final remarksCtrl = TextEditingController();
-    final decisionColor = decision == 'APPROVED' ? kSuccess
-        : decision == 'REJECTED' ? kError : kWarning;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(children: [
-          Icon(decision == 'APPROVED' ? Icons.check_circle
-              : decision == 'REJECTED' ? Icons.cancel : Icons.info_outline,
-              color: decisionColor),
-          const SizedBox(width: 10),
-          Text(decision.replaceAll('_', ' ')),
-        ]),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text('Are you sure you want to mark this application as'
-              ' ${decision.replaceAll("_", " ")}?'),
-          const SizedBox(height: 16),
-          TextField(
-            controller: remarksCtrl,
-            maxLines: 3,
-            decoration: InputDecoration(
-              labelText: 'Admin Remarks (optional)',
-              hintText: 'e.g. Good credit profile. Approved.',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          ),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: decisionColor),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true && mounted) {
-      try {
-        final token = context.read<AdminAuthProvider>().token!;
-        await _api.submitDecision(token, widget.app['app_id'], decision, remarksCtrl.text);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('✅ Application marked as ${decision.replaceAll("_", " ")}'),
-                backgroundColor: decisionColor));
-          Navigator.pop(context);
-        }
-      } catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: kError));
+  Future<void> _submitDecision(String decision) async {
+    if (_submitting) return;
+    setState(() => _submitting = true);
+    try {
+      final token = context.read<AdminAuthProvider>().token!;
+      await _api.submitDecision(token, widget.app['app_id'], decision, _remarksCtrl.text);
+      if (mounted) {
+        final color = decision == 'APPROVED' ? kSuccess
+            : decision == 'REJECTED' ? kError : kWarning;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('✅ Marked as ${decision.replaceAll('_', ' ')}'),
+          backgroundColor: color,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ));
+        Navigator.pop(context);
       }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e.toString()), backgroundColor: kError,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final app = widget.app;
-    final status = app['status'] ?? '';
-    final score = app['risk_score'] ?? 0;
-    final flags = (app['risk_flags'] as List?)?.cast<String>() ?? [];
+    final app      = widget.app;
+    final status   = (app['status'] ?? '') as String;
+    final score    = (app['risk_score'] ?? 0) as int;
+    final flags    = (app['risk_flags'] as List?)?.cast<String>() ?? <String>[];
     final canDecide = status == 'PENDING' || status == 'UNDER_REVIEW';
+    final business  = app['business_name'] as String? ??
+        (app['business_id'] as String? ?? '').substring(0, 8).toUpperCase();
 
     return Scaffold(
       backgroundColor: kBackground,
       appBar: AppBar(
-        title: Text('Application — ${app['app_id'].toString().substring(0, 8).toUpperCase()}'),
+        backgroundColor: Colors.white,
         elevation: 0,
-        actions: canDecide ? [
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: kSuccess),
-              icon: const Icon(Icons.check, size: 16),
-              label: const Text('Approve'),
-              onPressed: () => _showDecisionDialog('APPROVED'),
+        foregroundColor: kTextDark,
+        titleSpacing: 0,
+        leading: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            margin: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: kBackground,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFEEECF5)),
             ),
+            child: const Icon(Icons.arrow_back_ios_rounded, size: 16, color: kTextDark),
           ),
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: kError),
-              icon: const Icon(Icons.close, size: 16),
-              label: const Text('Reject'),
-              onPressed: () => _showDecisionDialog('REJECTED'),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 14),
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: kWarning),
-              icon: const Icon(Icons.info_outline, size: 16),
-              label: const Text('More Info'),
-              onPressed: () => _showDecisionDialog('UNDER_REVIEW'),
-            ),
-          ),
-        ] : null,
+        ),
+        title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Application — ${app['app_id'].toString().substring(0, 8).toUpperCase()}',
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+          Text(business, style: const TextStyle(fontSize: 11, color: kTextMuted,
+              fontWeight: FontWeight.w400)),
+        ]),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, thickness: 1, color: Color(0xFFEEECF5)),
+        ),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(28),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                // ── Left Column ───────────────────────────────────────────
-                Expanded(flex: 3, child: Column(children: [
-                  // Loan Summary Card
-                  _Card(title: 'Loan Details', children: [
-                    _InfoGrid([
-                      _Info('Amount', '₹ ${_fmt(app['requested_amount'])}'),
-                      _Info('Tenure', '${app['tenure_months']} months'),
-                      _Info('Purpose', (app['purpose'] ?? '').toString().replaceAll('_', ' ')),
-                      _Info('Status', status.replaceAll('_', ' ')),
-                      _Info('Turnover', '₹ ${_fmt(app['declared_turnover'])}'),
-                      _Info('Profit', '₹ ${_fmt(app['declared_profit'])}'),
-                    ]),
-                  ]),
-                  const SizedBox(height: 20),
+          ? const Center(child: CircularProgressIndicator(color: kPrimary))
+          : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              // ── Left scrollable column ─────────────────────────────────
+              Expanded(
+                flex: 6,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(28),
+                  child: Column(children: [
+                    // Borrower profile card
+                    _ProfileCard(app: app, business: business),
+                    const SizedBox(height: 20),
 
-                  // Risk Score Card
-                  _Card(title: 'Risk Assessment', children: [
-                    Row(children: [
-                      // Score Gauge
-                      Container(
-                        width: 80, height: 80,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: score >= 80 ? kSuccess.withOpacity(0.1)
-                              : score >= 60 ? kWarning.withOpacity(0.1) : kError.withOpacity(0.1),
-                          border: Border.all(
-                            color: score >= 80 ? kSuccess : score >= 60 ? kWarning : kError,
-                            width: 3,
-                          ),
-                        ),
-                        child: Center(child: Text('$score',
-                            style: TextStyle(
-                              fontSize: 24, fontWeight: FontWeight.w800,
-                              color: score >= 80 ? kSuccess : score >= 60 ? kWarning : kError,
-                            ))),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(score >= 80 ? 'Low Risk' : score >= 60 ? 'Medium Risk' : 'High Risk',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700,
-                                color: score >= 80 ? kSuccess : score >= 60 ? kWarning : kError)),
-                        const SizedBox(height: 4),
-                        Text('out of 100 — higher is better',
-                            style: const TextStyle(fontSize: 12, color: kTextMuted)),
-                        if (flags.isEmpty) ...[
-                          const SizedBox(height: 8),
-                          const Row(children: [Icon(Icons.check_circle, color: kSuccess, size: 14),
-                            SizedBox(width: 4), Text('No risk flags', style: TextStyle(fontSize: 12, color: kSuccess))]),
-                        ],
-                      ])),
+                    // Loan details
+                    _SectionCard(title: 'Loan Details', children: [
+                      _InfoGrid([
+                        _Info('Amount', '₹${_fmt(app['requested_amount'])}'),
+                        _Info('Tenure', '${app['tenure_months']} months'),
+                        _Info('Purpose', (app['purpose'] ?? '').toString().replaceAll('_', ' ')),
+                        _Info('Turnover', '₹${_fmt(app['declared_turnover'])}'),
+                        _Info('Profit',   '₹${_fmt(app['declared_profit'])}'),
+                        _Info('Status',   status.replaceAll('_', ' ')),
+                      ]),
                     ]),
-                    if (flags.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      Wrap(spacing: 8, runSpacing: 6, children: flags.map((f) => Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(color: kError.withOpacity(0.08), borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: kError.withOpacity(0.3))),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          const Icon(Icons.warning_amber, size: 12, color: kError),
-                          const SizedBox(width: 4),
-                          Text(f.replaceAll('_', ' '),
-                              style: const TextStyle(fontSize: 11, color: kError, fontWeight: FontWeight.w600)),
-                        ]),
-                      )).toList()),
+                    const SizedBox(height: 20),
+
+                    // Risk assessment
+                    _RiskCard(score: score, flags: flags),
+
+                    // Admin remarks (read-only, if already set and can't decide)
+                    if (!canDecide && (app['admin_remarks'] as String? ?? '').isNotEmpty) ...[ 
+                      const SizedBox(height: 20),
+                      _SectionCard(title: 'Admin Remarks', children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF8E1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(app['admin_remarks'],
+                              style: const TextStyle(color: kTextDark, height: 1.5, fontSize: 13)),
+                        ),
+                      ]),
                     ],
                   ]),
-                  const SizedBox(height: 20),
+                ),
+              ),
 
-                  // Admin Remarks
-                  if (app['admin_remarks'] != null)
-                    _Card(title: 'Admin Remarks', children: [
-                      Text(app['admin_remarks'] ?? '',
-                          style: const TextStyle(color: kTextDark, height: 1.5)),
+              // ── Right sticky decision + charts panel ────────────────────
+              Container(
+                width: 1,
+                color: const Color(0xFFEEECF5),
+              ),
+              Expanded(
+                flex: 4,
+                child: Column(children: [
+                  // Decision panel — sticky at top
+                  Container(
+                    color: Colors.white,
+                    padding: const EdgeInsets.all(20),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Text('Decision',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kTextDark)),
+                      const SizedBox(height: 12),
+
+                      // Status badge
+                      _StatusBadge(status),
+                      const SizedBox(height: 16),
+
+                      if (canDecide) ...[ 
+                        // Inline remarks field
+                        TextField(
+                          controller: _remarksCtrl,
+                          maxLines: 3,
+                          style: const TextStyle(fontSize: 13),
+                          decoration: InputDecoration(
+                            labelText: 'Remarks (optional)',
+                            hintText: 'e.g. Good credit profile…',
+                            filled: true,
+                            fillColor: kBackground,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(color: Color(0xFFDDDAEE)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(color: Color(0xFFDDDAEE)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(color: kPrimary, width: 2),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Decision buttons — inline, no dialog
+                        if (_submitting)
+                          const Center(child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            child: CircularProgressIndicator(color: kPrimary),
+                          ))
+                        else ...[
+                          _DecisionBtn(
+                            label: 'Approve',
+                            icon: Icons.check_circle_rounded,
+                            color: kSuccess,
+                            onTap: () => _confirmAndSubmit('APPROVED'),
+                          ),
+                          const SizedBox(height: 8),
+                          _DecisionBtn(
+                            label: 'Request More Info',
+                            icon: Icons.help_outline_rounded,
+                            color: kWarning,
+                            onTap: () => _confirmAndSubmit('UNDER_REVIEW'),
+                          ),
+                          const SizedBox(height: 8),
+                          _DecisionBtn(
+                            label: 'Reject',
+                            icon: Icons.cancel_rounded,
+                            color: kError,
+                            outline: true,
+                            onTap: () => _confirmAndSubmit('REJECTED'),
+                          ),
+                        ],
+                      ] else ...[ 
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: kBackground,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFEEECF5)),
+                          ),
+                          child: const Row(children: [
+                            Icon(Icons.info_outline_rounded, size: 14, color: kTextMuted),
+                            SizedBox(width: 8),
+                            Expanded(child: Text('Decision already made. No further action needed.',
+                                style: TextStyle(fontSize: 12, color: kTextMuted))),
+                          ]),
+                        ),
+                      ],
                     ]),
-                ])),
+                  ),
+                  const Divider(height: 1, thickness: 1, color: Color(0xFFEEECF5)),
 
-                const SizedBox(width: 20),
+                  // Charts — scroll inside right column
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(children: [
+                        if (_revenueData != null) ...[ 
+                          const Text('Revenue Trend',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: kTextDark)),
+                          const SizedBox(height: 12),
+                          SizedBox(height: 180, child: _RevenueChart(_revenueData!)),
+                          const SizedBox(height: 20),
+                        ],
+                        if (_expenseData != null) ...[ 
+                          const Text('Expense Breakdown',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: kTextDark)),
+                          const SizedBox(height: 12),
+                          SizedBox(height: 200, child: _ExpensePieChart(_expenseData!)),
+                        ],
+                      ]),
+                    ),
+                  ),
+                ]),
+              ),
+            ]),
+    );
+  }
 
-                // ── Right Column — Charts ─────────────────────────────────
-                Expanded(flex: 4, child: Column(children: [
-                  // Revenue Line Chart
-                  if (_revenueData != null)
-                    _Card(title: '📈 Revenue Trend (6 Months)', children: [
-                      SizedBox(height: 200, child: _RevenueChart(_revenueData!)),
-                    ]),
-                  const SizedBox(height: 20),
-
-                  // Expense Pie Chart
-                  if (_expenseData != null)
-                    _Card(title: '🥧 Expense Breakdown', children: [
-                      SizedBox(height: 200, child: _ExpensePieChart(_expenseData!)),
-                    ]),
-                ])),
-              ]),
+  void _confirmAndSubmit(String decision) {
+    final color = decision == 'APPROVED' ? kSuccess
+        : decision == 'REJECTED' ? kError : kWarning;
+    final icon  = decision == 'APPROVED' ? Icons.check_circle_rounded
+        : decision == 'REJECTED' ? Icons.cancel_rounded : Icons.help_outline_rounded;
+    showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(width: 10),
+          Text('Confirm: ${decision.replaceAll('_', ' ')}',
+              style: const TextStyle(fontSize: 16)),
+        ]),
+        content: Text(
+          'This will mark the application as ${decision.replaceAll("_", " ")}.\n'
+          'This action will notify the borrower.',
+          style: const TextStyle(fontSize: 13, color: kTextMuted),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: color,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              elevation: 0,
             ),
+            onPressed: () { Navigator.pop(ctx, true); _submitDecision(decision); },
+            child: const Text('Confirm', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -249,42 +333,210 @@ class _State extends State<ApplicationDetailScreen> {
   }
 }
 
-// ── Charts ────────────────────────────────────────────────────────────────
+// ── Decision Button ───────────────────────────────────────────────────────────
+class _DecisionBtn extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final bool outline;
+  final VoidCallback onTap;
+  const _DecisionBtn({
+    required this.label, required this.icon,
+    required this.color, required this.onTap, this.outline = false,
+  });
+  @override Widget build(BuildContext context) => SizedBox(
+    width: double.infinity, height: 42,
+    child: outline
+        ? OutlinedButton.icon(
+            onPressed: onTap,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: color,
+              side: BorderSide(color: color.withOpacity(0.5), width: 1.5),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: Icon(icon, size: 16),
+            label: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          )
+        : ElevatedButton.icon(
+            onPressed: onTap,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: color,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: Icon(icon, size: 16, color: Colors.white),
+            label: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+          ),
+  );
+}
+
+// ── Profile Card ─────────────────────────────────────────────────────────────
+class _ProfileCard extends StatelessWidget {
+  final Map<String, dynamic> app;
+  final String business;
+  const _ProfileCard({required this.app, required this.business});
+  @override Widget build(BuildContext context) {
+    final id = (app['app_id'] as String? ?? '');
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1A1730), Color(0xFF3D2F72)],
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(children: [
+        Container(
+          width: 52, height: 52,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.15),
+            shape: BoxShape.circle,
+          ),
+          child: Center(child: Text(
+            business.isNotEmpty ? business[0].toUpperCase() : '?',
+            style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800),
+          )),
+        ),
+        const SizedBox(width: 14),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(business, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 2),
+          Text('ID: ${id.substring(0, 8).toUpperCase()}',
+              style: const TextStyle(color: Colors.white54, fontSize: 11)),
+        ])),
+      ]),
+    );
+  }
+}
+
+// ── Status Badge ──────────────────────────────────────────────────────────────
+class _StatusBadge extends StatelessWidget {
+  final String status;
+  const _StatusBadge(this.status);
+  @override Widget build(BuildContext context) {
+    final color = statusColor(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 8),
+        Text(status.replaceAll('_', ' '),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+      ]),
+    );
+  }
+}
+
+// ── Risk Card ─────────────────────────────────────────────────────────────────
+class _RiskCard extends StatelessWidget {
+  final int score;
+  final List<String> flags;
+  const _RiskCard({required this.score, required this.flags});
+  @override Widget build(BuildContext context) {
+    final color = score >= 70 ? kSuccess : score >= 45 ? kWarning : kError;
+    final label = score >= 70 ? 'Low Risk' : score >= 45 ? 'Moderate Risk' : 'High Risk';
+    return _SectionCard(title: 'Risk Assessment', children: [
+      Row(children: [
+        Container(
+          width: 72, height: 72,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: color.withOpacity(0.08),
+            border: Border.all(color: color, width: 3),
+          ),
+          child: Center(child: Text('$score',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: color))),
+        ),
+        const SizedBox(width: 16),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: color)),
+          const SizedBox(height: 2),
+          const Text('out of 100 — higher is better',
+              style: TextStyle(fontSize: 11, color: kTextMuted)),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: SizedBox(height: 6, child: LinearProgressIndicator(
+              value: score / 100,
+              backgroundColor: color.withOpacity(0.15),
+              valueColor: AlwaysStoppedAnimation(color),
+            )),
+          ),
+          if (flags.isEmpty) ...[ 
+            const SizedBox(height: 6),
+            const Row(children: [
+              Icon(Icons.check_circle_rounded, color: kSuccess, size: 13),
+              SizedBox(width: 4),
+              Text('No risk flags detected', style: TextStyle(fontSize: 11, color: kSuccess)),
+            ]),
+          ],
+        ])),
+      ]),
+      if (flags.isNotEmpty) ...[ 
+        const SizedBox(height: 14),
+        Wrap(spacing: 8, runSpacing: 6, children: flags.map((f) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: kError.withOpacity(0.07),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: kError.withOpacity(0.25)),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.warning_amber_rounded, size: 11, color: kError),
+            const SizedBox(width: 4),
+            Text(f.replaceAll('_', ' '),
+                style: const TextStyle(fontSize: 11, color: kError, fontWeight: FontWeight.w600)),
+          ]),
+        )).toList()),
+      ],
+    ]);
+  }
+}
+
+// ── Charts ────────────────────────────────────────────────────────────────────
 class _RevenueChart extends StatelessWidget {
   final Map<String, dynamic> data;
   const _RevenueChart(this.data);
-
-  @override
-  Widget build(BuildContext context) {
+  @override Widget build(BuildContext context) {
     final months = (data['months'] as List?)?.cast<String>() ?? [];
     final values = (data['revenue'] as List?)?.map((v) => (v as num).toDouble()).toList() ?? [];
     if (values.isEmpty) return const Center(child: Text('No data'));
-
     return LineChart(LineChartData(
-      gridData: FlGridData(show: true, drawVerticalLine: false,
-          getDrawingHorizontalLine: (_) => FlLine(color: Colors.grey.withOpacity(0.1), strokeWidth: 1)),
+      gridData: FlGridData(
+        show: true, drawVerticalLine: false,
+        getDrawingHorizontalLine: (_) => FlLine(color: const Color(0xFFF0EEF8), strokeWidth: 1),
+      ),
       titlesData: FlTitlesData(
         leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         bottomTitles: AxisTitles(sideTitles: SideTitles(
-          showTitles: true, reservedSize: 28,
+          showTitles: true, reservedSize: 24,
           getTitlesWidget: (v, _) {
             final i = v.toInt();
             return i >= 0 && i < months.length
-                ? Text(months[i], style: const TextStyle(fontSize: 10, color: kTextMuted))
+                ? Text(months[i], style: const TextStyle(fontSize: 9, color: kTextMuted))
                 : const SizedBox();
           },
         )),
       ),
       borderData: FlBorderData(show: false),
       lineBarsData: [LineChartBarData(
-        spots: values.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
-        isCurved: true,
-        color: kPrimary,
-        barWidth: 3,
-        dotData: const FlDotData(show: true),
-        belowBarData: BarAreaData(show: true, color: kPrimary.withOpacity(0.08)),
+        spots: values.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value / 1000)).toList(),
+        isCurved: true, color: kPrimary, barWidth: 2.5,
+        dotData: FlDotData(show: true,
+            getDotPainter: (_, __, ___, ____) =>
+                FlDotCirclePainter(radius: 3.5, color: kPrimary, strokeWidth: 2, strokeColor: Colors.white)),
+        belowBarData: BarAreaData(show: true,
+            gradient: LinearGradient(colors: [kPrimary.withOpacity(0.15), kPrimary.withOpacity(0)],
+                begin: Alignment.topCenter, end: Alignment.bottomCenter)),
       )],
     ));
   }
@@ -293,59 +545,46 @@ class _RevenueChart extends StatelessWidget {
 class _ExpensePieChart extends StatelessWidget {
   final Map<String, dynamic> data;
   const _ExpensePieChart(this.data);
-
-  static const _colors = [kPrimary, kAccent, kSuccess, kWarning, kError, Color(0xFF26C6DA)];
-
-  @override
-  Widget build(BuildContext context) {
+  static const _colors = [kPrimary, kAccent, kSuccess, kWarning, kError,
+    Color(0xFF26C6DA), Color(0xFFAB47BC)];
+  @override Widget build(BuildContext context) {
     final categories = (data['categories'] as List?)?.cast<String>() ?? [];
-    final values = (data['values'] as List?)?.map((v) => (v as num).toDouble()).toList() ?? [];
+    final values     = (data['values'] as List?)?.map((v) => (v as num).toDouble()).toList() ?? [];
     if (values.isEmpty) return const Center(child: Text('No data'));
-
     return Row(children: [
-      Expanded(
-        child: PieChart(PieChartData(
-          sectionsSpace: 2,
-          centerSpaceRadius: 35,
-          sections: values.asMap().entries.map((e) => PieChartSectionData(
-            color: _colors[e.key % _colors.length],
-            value: e.value,
-            title: '',
-            radius: 60,
-          )).toList(),
-        )),
-      ),
-      const SizedBox(width: 16),
-      Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
+      Expanded(child: PieChart(PieChartData(
+        sectionsSpace: 2, centerSpaceRadius: 30,
+        sections: values.asMap().entries.map((e) => PieChartSectionData(
+          color: _colors[e.key % _colors.length],
+          value: e.value, title: '', radius: 55,
+        )).toList(),
+      ))),
+      const SizedBox(width: 12),
+      Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start,
         children: categories.asMap().entries.map((e) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 3),
           child: Row(children: [
-            Container(width: 10, height: 10,
+            Container(width: 8, height: 8,
                 decoration: BoxDecoration(color: _colors[e.key % _colors.length], shape: BoxShape.circle)),
             const SizedBox(width: 6),
             Text(e.value, style: const TextStyle(fontSize: 11, color: kTextDark)),
           ]),
-        )).toList(),
-      ),
+        )).toList()),
     ]);
   }
 }
 
-// ── Layout Helpers ─────────────────────────────────────────────────────────
-class _Card extends StatelessWidget {
+// ── Section Card ──────────────────────────────────────────────────────────────
+class _SectionCard extends StatelessWidget {
   final String title;
   final List<Widget> children;
-  const _Card({required this.title, required this.children});
-
-  @override
-  Widget build(BuildContext context) => Container(
+  const _SectionCard({required this.title, required this.children});
+  @override Widget build(BuildContext context) => Container(
     width: double.infinity,
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
       color: kSurface,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10)],
     ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -356,23 +595,19 @@ class _Card extends StatelessWidget {
   );
 }
 
+// ── Info Grid ─────────────────────────────────────────────────────────────────
 class _InfoGrid extends StatelessWidget {
   final List<_Info> items;
   const _InfoGrid(this.items);
-
-  @override
-  Widget build(BuildContext context) => Wrap(
-    spacing: 16, runSpacing: 12,
-    children: items.map((i) => SizedBox(width: 160, child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(i.label, style: const TextStyle(fontSize: 11, color: kTextMuted)),
-          const SizedBox(height: 2),
-          Text(i.value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: kTextDark)),
-        ]))).toList(),
+  @override Widget build(BuildContext context) => Wrap(
+    spacing: 14, runSpacing: 12,
+    children: items.map((i) => SizedBox(width: 150,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(i.label, style: const TextStyle(fontSize: 11, color: kTextMuted)),
+        const SizedBox(height: 3),
+        Text(i.value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: kTextDark)),
+      ]))).toList(),
   );
 }
 
-class _Info {
-  final String label, value;
-  const _Info(this.label, this.value);
-}
+class _Info { final String label, value; const _Info(this.label, this.value); }

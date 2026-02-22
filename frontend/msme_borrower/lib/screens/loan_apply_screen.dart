@@ -18,9 +18,10 @@ class _LoanApplyScreenState extends State<LoanApplyScreen> {
   double _amount   = 100000;
   int    _tenure   = 12;
   String _purpose  = 'WORKING_CAPITAL';
-  bool   _loading  = false;
-  bool   _aaFetch  = false;
-  bool   _profileLoaded = false; // true once financials auto-filled
+  bool   _loading       = false;
+  bool   _aaFetch        = false;
+  bool   _profileLoaded  = false; // true once financials auto-filled
+  bool   _editFinancials = false; // unlocked by user explicitly
 
   final List<Map<String,String>> _purposes = [
     {'value': 'WORKING_CAPITAL',   'label': 'Working Capital'},
@@ -176,34 +177,106 @@ class _LoanApplyScreenState extends State<LoanApplyScreen> {
           _Card(children: [
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               _Label('Business Financials (Annual)'),
-              if (_profileLoaded)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(color: kSuccess.withOpacity(0.12), borderRadius: BorderRadius.circular(12)),
-                  child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.check_circle, color: kSuccess, size: 12),
-                    SizedBox(width: 4),
-                    Text('Auto-filled from profile', style: TextStyle(fontSize: 10, color: kSuccess)),
-                  ]),
+              if (_profileLoaded && !_editFinancials)
+                GestureDetector(
+                  onTap: () => setState(() => _editFinancials = true),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(color: kPrimary.withOpacity(0.08), borderRadius: BorderRadius.circular(12)),
+                    child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.edit_outlined, size: 11, color: kPrimary),
+                      SizedBox(width: 4),
+                      Text('Override', style: TextStyle(fontSize: 10, color: kPrimary, fontWeight: FontWeight.w600)),
+                    ]),
+                  ),
+                ),
+              if (_profileLoaded && _editFinancials)
+                GestureDetector(
+                  onTap: () => setState(() => _editFinancials = false),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(color: kWarning.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                    child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.lock_reset, size: 11, color: kWarning),
+                      SizedBox(width: 4),
+                      Text('Restore profile', style: TextStyle(fontSize: 10, color: kWarning, fontWeight: FontWeight.w600)),
+                    ]),
+                  ),
                 ),
             ]),
-            const SizedBox(height: 4),
-            if (_profileLoaded)
-              const Text('Values saved from your profile. Tap to edit if changed.',
-                  style: TextStyle(fontSize: 11, color: kTextMuted)),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _turnoverCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Annual Turnover (₹)', prefixIcon: Icon(Icons.trending_up)),
-              validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
-            ),
-            const SizedBox(height: 14),
-            TextFormField(
-              controller: _profitCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Annual Profit (₹)', prefixIcon: Icon(Icons.account_balance)),
-            ),
+            const SizedBox(height: 10),
+
+            // Read-only display when loaded from profile (and user hasn't overridden)
+            if (_profileLoaded && !_editFinancials) ...[
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: kBackground,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFDDDAEE)),
+                ),
+                child: Column(children: [
+                  Row(children: [
+                    const Icon(Icons.lock_outline, size: 14, color: kTextMuted),
+                    const SizedBox(width: 6),
+                    const Text('From your profile', style: TextStyle(fontSize: 11, color: kTextMuted)),
+                  ]),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    Expanded(child: _ReadOnlyField(
+                      label: 'Annual Turnover',
+                      value: _turnoverCtrl.text.isNotEmpty
+                          ? '₹ ${_fmtReadable(_turnoverCtrl.text)}'
+                          : '—',
+                      icon: Icons.trending_up_outlined,
+                    )),
+                    const SizedBox(width: 12),
+                    Expanded(child: _ReadOnlyField(
+                      label: 'Annual Profit',
+                      value: _profitCtrl.text.isNotEmpty
+                          ? '₹ ${_fmtReadable(_profitCtrl.text)}'
+                          : '—',
+                      icon: Icons.account_balance_outlined,
+                    )),
+                  ]),
+                ]),
+              ),
+            ] else ...[
+              // Editable fields when not loaded from profile or user overrides
+              if (!_profileLoaded)
+                const Text(
+                  'Annual financials not found in your profile. Please enter manually.',
+                  style: TextStyle(fontSize: 11, color: kError),
+                ),
+              if (_editFinancials)
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: kWarning.withOpacity(0.07), borderRadius: BorderRadius.circular(8)),
+                  child: const Row(children: [
+                    Icon(Icons.warning_amber_rounded, size: 13, color: kWarning),
+                    SizedBox(width: 6),
+                    Expanded(child: Text(
+                      'Overriding profile values for this application only.',
+                      style: TextStyle(fontSize: 11, color: kWarning),
+                    )),
+                  ]),
+                ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _turnoverCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                    labelText: 'Annual Turnover (₹)', prefixIcon: Icon(Icons.trending_up_outlined)),
+                validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _profitCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                    labelText: 'Annual Profit (₹)', prefixIcon: Icon(Icons.account_balance_outlined)),
+              ),
+            ],
           ]),
           const SizedBox(height: 16),
 
@@ -251,6 +324,15 @@ class _LoanApplyScreenState extends State<LoanApplyScreen> {
   String _fmtAmount(double v) => v >= 100000
       ? '${(v / 100000).toStringAsFixed(v.remainder(100000) == 0 ? 0 : 1)}L'
       : '${(v / 1000).toStringAsFixed(0)}K';
+
+  String _fmtReadable(String raw) {
+    final v = double.tryParse(raw);
+    if (v == null) return raw;
+    if (v >= 10000000) return '${(v / 10000000).toStringAsFixed(1)} Cr';
+    if (v >= 100000)   return '${(v / 100000).toStringAsFixed(1)} L';
+    if (v >= 1000)     return '${(v / 1000).toStringAsFixed(0)} K';
+    return v.toStringAsFixed(0);
+  }
 }
 
 class _Card extends StatelessWidget {
@@ -269,4 +351,20 @@ class _Label extends StatelessWidget {
   const _Label(this.text);
   @override Widget build(BuildContext context) => Text(text,
       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: kPrimary));
+}
+
+class _ReadOnlyField extends StatelessWidget {
+  final String label, value;
+  final IconData icon;
+  const _ReadOnlyField({required this.label, required this.value, required this.icon});
+  @override Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Row(children: [
+      Icon(icon, size: 13, color: kTextMuted),
+      const SizedBox(width: 4),
+      Text(label, style: const TextStyle(fontSize: 10, color: kTextMuted)),
+    ]),
+    const SizedBox(height: 4),
+    Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: kTextDark)),
+  ]);
 }

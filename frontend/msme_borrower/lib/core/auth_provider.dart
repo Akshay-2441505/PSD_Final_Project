@@ -51,12 +51,16 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // Loads borrower financials from dashboard insights and caches them
+  // Loads borrower profile + financial insights and caches them
   Future<void> _loadProfileData() async {
     if (_token == null) return;
     try {
-      final insights = await _api.getDashboardInsights(_token!);
-      _profile = insights; // contains approved_amount, health_score, etc.
+      final results = await Future.wait([
+        _api.getMyProfile(_token!),
+        _api.getDashboardInsights(_token!),
+      ]);
+      // Merge: profile fields (legal_name, etc.) + insights fields
+      _profile = {...results[0], ...results[1]};
     } catch (_) {}
   }
 

@@ -17,6 +17,9 @@ class BorrowerRegisterRequest(BaseModel):
     password: str = Field(..., min_length=6)
     gstin: Optional[str] = Field(None, max_length=15)
     business_type: Optional[str] = None
+    annual_turnover: Optional[float] = Field(None, ge=0, description="Annual business turnover in INR")
+    annual_profit: Optional[float] = Field(None, description="Annual net profit in INR")
+
 
 class BorrowerLoginRequest(BaseModel):
     email: EmailStr

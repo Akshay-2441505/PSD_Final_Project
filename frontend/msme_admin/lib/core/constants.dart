@@ -1,10 +1,10 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
 
 // ── API ───────────────────────────────────────────────────────────────────
 String get kBaseUrl => kIsWeb ? 'http://localhost:8000' : 'http://10.0.2.2:8000';
 
 // ── Colors ────────────────────────────────────────────────────────────────
-import 'package:flutter/material.dart';
 
 const Color kPrimary     = Color(0xFF7C5CBF); // Soft Lilac/Purple
 const Color kAccent      = Color(0xFFFFC857); // Pastel Yellow

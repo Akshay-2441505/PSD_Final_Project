@@ -123,21 +123,167 @@ def make_decision(
     return MessageResponse(message=f"Application {payload.decision.value} successfully")
 
 
-# ── GET /admin/charts/expenses ────────────────────────────────────────────
-@router.get("/charts/expenses", response_model=ChartDataResponse)
-def get_expense_chart(admin: AdminUser = Depends(get_current_admin)):
-    """Simulated expense breakdown data for the admin pie chart."""
-    return ChartDataResponse(
-        labels=["Raw Materials", "Salaries", "Rent", "Utilities", "Logistics", "Marketing"],
-        data=[35.0, 25.0, 15.0, 8.0, 10.0, 7.0],
-    )
+# ── Helpers ────────────────────────────────────────────────────────────────
+import random as _random
+import hashlib as _hashlib
+import calendar as _calendar
+
+def _business_rng(business_id: str, salt: str = "") -> _random.Random:
+    """Return a Random() seeded deterministically from business_id + optional salt.
+    Using salt=purpose for expense charts, salt=turnover_bucket for revenue charts
+    ensures visually distinct charts across different loan types/scales."""
+    seed_str = f"{business_id}::{salt}"
+    seed_int = int(_hashlib.md5(seed_str.encode()).hexdigest(), 16) % (2 ** 31)
+    return _random.Random(seed_int)
+
+def _extract_purpose(loan) -> str:
+    """Safely extract purpose string from a loan regardless of enum/string type."""
+    if loan is None or loan.purpose is None:
+        return ""
+    p = loan.purpose
+    return p.value if hasattr(p, 'value') else str(p)
+
+# Purpose → expense weight profile (which categories dominate)
+_PURPOSE_WEIGHTS = {
+    "EQUIPMENT_PURCHASE": {"Raw Materials": 40, "Salaries": 20, "Rent": 10, "Utilities": 10, "Logistics": 10, "Equipment": 10},
+    "WORKING_CAPITAL":    {"Raw Materials": 25, "Salaries": 30, "Rent": 20, "Utilities": 10, "Logistics": 10, "Marketing": 5},
+    "EXPANSION":          {"Raw Materials": 20, "Salaries": 25, "Rent": 15, "Logistics": 15, "Marketing": 20, "Utilities": 5},
+    "INVENTORY":          {"Raw Materials": 45, "Logistics": 20, "Salaries": 15, "Rent": 10, "Utilities": 5, "Other": 5},
+    "TECHNOLOGY":         {"Salaries": 40, "Software": 20, "Rent": 15, "Marketing": 15, "Utilities": 10},
+    "MARKETING":          {"Marketing": 40, "Salaries": 25, "Rent": 15, "Logistics": 10, "Utilities": 10},
+}
+_DEFAULT_WEIGHTS = {"Raw Materials": 30, "Salaries": 25, "Rent": 20, "Utilities": 10, "Logistics": 10, "Marketing": 5}
 
 
-# ── GET /admin/charts/revenue ─────────────────────────────────────────────
-@router.get("/charts/revenue", response_model=ChartDataResponse)
-def get_revenue_chart(admin: AdminUser = Depends(get_current_admin)):
-    """Simulated monthly revenue trend for the admin line graph (last 6 months)."""
-    return ChartDataResponse(
-        labels=["Sep", "Oct", "Nov", "Dec", "Jan", "Feb"],
-        data=[820000, 950000, 870000, 1100000, 1050000, 1230000],
-    )
+# ── GET /admin/charts/expenses ─────────────────────────────────────────────
+@router.get("/charts/expenses")
+def get_expense_chart(
+    app_id: str = None,
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin),
+):
+    """
+    Expense breakdown — Priority:
+    1. Real AA bank_statement_data (most accurate)
+    2. Deterministic seeded mock, scaled by turnover + skewed by purpose
+    """
+    from uuid import UUID as _UUID
+    from collections import defaultdict
+
+    loan = None
+    if app_id:
+        try:
+            loan = db.query(LoanApplication).filter(
+                LoanApplication.app_id == _UUID(app_id)
+            ).first()
+        except Exception:
+            pass
+
+    # ── Priority 1: Real AA data ──────────────────────────────────────────
+    if loan and loan.bank_statement_data:
+        txns = loan.bank_statement_data.get("transactions", [])
+        debits = [t for t in txns if t.get("type") == "debit"]
+        buckets: dict = defaultdict(float)
+        keyword_map = {
+            "Raw Material": "Raw Materials", "Staff Salary": "Salaries",
+            "Rent": "Rent", "Utility": "Utilities", "Logistics": "Logistics",
+            "Equipment": "Equipment", "Marketing": "Marketing",
+        }
+        for t in debits:
+            desc = t.get("description", "")
+            matched = False
+            for kw, bucket in keyword_map.items():
+                if kw.lower() in desc.lower():
+                    buckets[bucket] += t.get("amount", 0)
+                    matched = True
+                    break
+            if not matched:
+                buckets["Other"] += t.get("amount", 0)
+        non_zero = {k: v for k, v in buckets.items() if v > 0}
+        # Guard: stale data with only 1-2 categories → fall through to seeded mock
+        if len(non_zero) >= 3:
+            return {"categories": list(non_zero.keys()), "values": list(non_zero.values())}
+
+    # ── Priority 2: Deterministic seeded mock ─────────────────────────────
+    # Seed includes PURPOSE so EQUIPMENT_PURCHASE vs WORKING_CAPITAL from
+    # the SAME business produces completely different pie charts.
+    business_id = str(loan.business_id) if loan else (app_id or "default")
+    purpose     = _extract_purpose(loan)          # safe enum / string helper
+    turnover    = float(loan.declared_turnover or 1200000) if loan else 1200000
+
+    rng     = _business_rng(business_id, salt=purpose)   # ← purpose in seed
+    weights = _PURPOSE_WEIGHTS.get(purpose, _DEFAULT_WEIGHTS)
+    total_w = sum(weights.values())
+
+    # Scale total expenses to ~55-70% of annual turnover, split by weights
+    expense_ratio = 0.55 + rng.random() * 0.15
+    total_expense = turnover * expense_ratio
+
+    categories, values = [], []
+    for cat, w in weights.items():
+        base  = (w / total_w) * total_expense
+        noise = 1.0 + (rng.random() * 0.40 - 0.20)  # wider ±20% noise → more contrast
+        categories.append(cat)
+        values.append(max(1, round(base * noise)))
+
+    return {"categories": categories, "values": values}
+
+
+# ── GET /admin/charts/revenue ──────────────────────────────────────────────
+@router.get("/charts/revenue")
+def get_revenue_chart(
+    app_id: str = None,
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin),
+):
+    """
+    Monthly revenue trend — Priority:
+    1. Real AA bank_statement_data credit transactions
+    2. Deterministic seeded mock: 6 months, scaled by declared_turnover
+    """
+    from uuid import UUID as _UUID
+    from collections import defaultdict
+
+    loan = None
+    if app_id:
+        try:
+            loan = db.query(LoanApplication).filter(
+                LoanApplication.app_id == _UUID(app_id)
+            ).first()
+        except Exception:
+            pass
+
+    # ── Priority 1: Real AA data (only if spans ≥3 distinct months) ────────
+    if loan and loan.bank_statement_data:
+        txns    = loan.bank_statement_data.get("transactions", [])
+        credits = [t for t in txns if t.get("type") == "credit"]
+        monthly: dict = defaultdict(float)
+        for t in credits:
+            d = t.get("date", "")
+            if len(d) >= 7:
+                monthly[d[:7]] += t.get("amount", 0)
+        # Guard: stale data seeded in a single month → skip to fresh mock
+        if len(monthly) >= 3:
+            sorted_months = sorted(monthly.keys())
+            labels = [_calendar.month_abbr[int(m.split("-")[1])] for m in sorted_months]
+            return {"months": labels, "revenue": [monthly[m] for m in sorted_months]}
+
+    # ── Priority 2: Deterministic seeded mock ─────────────────────────────
+    # Seed includes TURNOVER BUCKET so ₹5L and ₹50L businesses have distinctly
+    # different trend shapes (not just different Y-scales).
+    business_id     = str(loan.business_id) if loan else (app_id or "default")
+    turnover        = float(loan.declared_turnover or 1200000) if loan else 1200000
+    turnover_bucket = str(int(turnover / 500000))   # bucket in ₹5L steps
+    rng             = _business_rng(business_id, salt=turnover_bucket)  # ← turnover in seed
+
+    monthly_avg  = turnover / 12
+    growth       = 1.0 + rng.random() * 0.40   # wider range: 0–40% annual growth
+    volatility   = 0.15 + rng.random() * 0.35  # each biz has its own ±volatility
+    month_labels = ["Sep", "Oct", "Nov", "Dec", "Jan", "Feb"]
+    revenue      = []
+    for i in range(6):
+        trend_factor = 1.0 + (growth - 1.0) * (i / 5)
+        noise_factor = 1.0 + (rng.random() * volatility * 2 - volatility)
+        revenue.append(max(1, round(monthly_avg * trend_factor * noise_factor)))
+
+    return {"months": month_labels, "revenue": revenue}
