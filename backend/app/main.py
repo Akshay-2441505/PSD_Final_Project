@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.routers import auth, loans, admin, dashboard
+from app.routers import auth, loans, admin, dashboard, profile
 
 app = FastAPI(
     title="MSME Digital Lending Sandbox API",
@@ -25,6 +25,7 @@ app.include_router(auth.router,      prefix="/auth",      tags=["Auth"])
 app.include_router(loans.router,     prefix="/loans",     tags=["Loans"])
 app.include_router(admin.router,     prefix="/admin",     tags=["Admin"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
+app.include_router(profile.router,   prefix="/profile",   tags=["Profile"])
 
 @app.get("/", tags=["Health"])
 def health_check():

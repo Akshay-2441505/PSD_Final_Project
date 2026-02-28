@@ -98,3 +98,24 @@ class ApplicationStatusLog(Base):
     changed_by  = Column(String(255), nullable=True)   # admin email or "SYSTEM"
     remarks     = Column(Text, nullable=True)
     timestamp   = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# ── Table 5: borrower_financials ───────────────────────────────────────────
+
+class BorrowerFinancial(Base):
+    """Stores self-reported monthly revenue trend and expense breakdown per borrower.
+    Upserted each time the borrower updates their financial data.
+    """
+    __tablename__ = "borrower_financials"
+
+    id              = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    business_id     = Column(
+        UUID(as_uuid=True),
+        ForeignKey("borrower_profiles.business_id"),
+        nullable=False, unique=True, index=True,
+    )
+    # [{"month": "Sep 2024", "revenue": 820000}, ...]  — up to 12 entries
+    monthly_revenue  = Column(JSONB, nullable=True)
+    # [{"category": "Salaries", "percentage": 30}, ...]
+    expense_breakdown = Column(JSONB, nullable=True)
+    updated_at      = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

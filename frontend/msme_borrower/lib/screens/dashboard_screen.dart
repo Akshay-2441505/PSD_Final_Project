@@ -7,6 +7,7 @@ import '../core/api_service.dart';
 import 'loan_apply_screen.dart';
 import 'loan_status_screen.dart';
 import '../screens/login_screen.dart';
+import 'financial_setup_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -161,11 +162,44 @@ class _DashboardScreenState extends State<DashboardScreen>
                         SliverToBoxAdapter(
                           child: Padding(
                             padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-                            child: const Text('Revenue Trend',
-                                style: TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w700,
-                                    color: kTextDark)),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Revenue Trend',
+                                    style: TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w700,
+                                        color: kTextDark)),
+                                GestureDetector(
+                                  onTap: () async {
+                                    final updated = await Navigator.push<bool>(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const FinancialSetupScreen(),
+                                      ),
+                                    );
+                                    if (updated == true) _load();
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: kPrimary.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: kPrimary.withOpacity(0.2)),
+                                    ),
+                                    child: const Row(children: [
+                                      Icon(Icons.upload_rounded, size: 13, color: kPrimary),
+                                      SizedBox(width: 4),
+                                      Text('Update Financials',
+                                          style: TextStyle(
+                                              color: kPrimary,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600)),
+                                    ]),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                         SliverToBoxAdapter(

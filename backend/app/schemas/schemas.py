@@ -143,6 +143,33 @@ class ChartDataResponse(BaseModel):
 
 
 # ══════════════════════════════════════════════════════════════
+#  FINANCIAL DATA SCHEMAS
+# ══════════════════════════════════════════════════════════════
+
+class MonthlyRevenue(BaseModel):
+    month: str          # e.g. "Sep 2024"
+    revenue: float
+
+class ExpenseItem(BaseModel):
+    category: str       # e.g. "Salaries"
+    percentage: float   # 0-100
+
+class FinancialDataRequest(BaseModel):
+    monthly_revenue: List[MonthlyRevenue]   = Field(..., min_length=1, max_length=12)
+    expense_breakdown: List[ExpenseItem]    = Field(..., min_length=1, max_length=10)
+
+class FinancialDataResponse(BaseModel):
+    id: Optional[UUID] = None
+    business_id: Optional[UUID] = None
+    monthly_revenue: Optional[List[Any]]
+    expense_breakdown: Optional[List[Any]]
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+# ══════════════════════════════════════════════════════════════
 #  GENERIC
 # ══════════════════════════════════════════════════════════════
 

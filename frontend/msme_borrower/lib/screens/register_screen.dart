@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
 import '../core/auth_provider.dart';
+import 'financial_setup_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -50,10 +51,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!mounted) return;
     if (ok) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('✅ Account created! Please log in.'),
+        content: Text('✅ Account created successfully!'),
         backgroundColor: kSuccess,
+        behavior: SnackBarBehavior.floating,
       ));
-      Navigator.pop(context);
+      // Navigate to financial setup (user can skip)
+      await Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const FinancialSetupScreen(isPostRegistration: true),
+        ),
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(auth.error ?? 'Registration failed'),

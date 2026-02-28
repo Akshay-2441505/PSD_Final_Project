@@ -67,12 +67,41 @@ class ApiService {
     return _parse(r);
   }
 
+  // ── FINANCIAL DATA ────────────────────────────────────────────────────────
+
+  /// Save or update borrower's monthly revenue + expense breakdown.
+  Future<Map<String, dynamic>> uploadFinancials({
+    required String token,
+    required List<Map<String, dynamic>> monthlyRevenue,
+    required List<Map<String, dynamic>> expenseBreakdown,
+  }) async {
+    final r = await http.post(
+      Uri.parse('$_base/profile/financials'),
+      headers: _headers(token),
+      body: jsonEncode({
+        'monthly_revenue': monthlyRevenue,
+        'expense_breakdown': expenseBreakdown,
+      }),
+    );
+    return _parse(r);
+  }
+
+  /// Fetch the borrower's stored financial data.
+  Future<Map<String, dynamic>?> getMyFinancials(String token) async {
+    final r = await http.get(Uri.parse('$_base/profile/financials'), headers: _headers(token));
+    if (r.statusCode == 404) return null; // not set yet
+    return _parse(r);
+  }
+
   // ── HELPERS ──────────────────────────────────────────────────────────────
 
   Map<String, dynamic> _parse(http.Response r) {
     final body = jsonDecode(r.body);
     if (r.statusCode >= 400) {
-      throw Exception(body['detail'] ?? 'Request failed (${r.statusCode})');
+      // Preserve structured error detail if it's a map (e.g. 409 with code field)
+      final detail = body['detail'];
+      if (detail is Map) throw Exception(jsonEncode(detail));
+      throw Exception(detail ?? 'Request failed (${r.statusCode})');
     }
     return body as Map<String, dynamic>;
   }
