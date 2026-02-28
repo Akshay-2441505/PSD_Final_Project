@@ -62,6 +62,14 @@ class AdminApiService {
     return _parse(r);
   }
 
+  /// Portfolio-level analytics: total disbursed, approval rate, avg risk score
+  Future<Map<String, dynamic>?> getPortfolioStats(String token) async {
+    try {
+      final r = await http.get(Uri.parse('$_base/admin/portfolio/stats'), headers: _headers(token));
+      return _parse(r);
+    } catch (_) { return null; }
+  }
+
   // ── CHARTS ────────────────────────────────────────────────────────────
   Future<Map<String, dynamic>> getExpenseChart(String token, String appId) async {
     final r = await http.get(

@@ -227,6 +227,38 @@ class _LoanApplyScreenState extends State<LoanApplyScreen> {
           ]),
           const SizedBox(height: 16),
 
+          // ── Interest Rate Info ────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [
+                kPrimary.withOpacity(0.06), kAccent.withOpacity(0.04),
+              ]),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: kPrimary.withOpacity(0.15)),
+            ),
+            child: Row(children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: kPrimary,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Text('12% p.a.', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
+              ),
+              const SizedBox(width: 14),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Fixed Interest Rate', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: kTextDark)),
+                const SizedBox(height: 2),
+                Text(
+                  'Total Repayment: ₹ ${(emiCalc * _tenure).toStringAsFixed(0)}  ·  Interest: ₹ ${((emiCalc * _tenure) - _amount).toStringAsFixed(0)}',
+                  style: const TextStyle(fontSize: 11, color: kTextMuted),
+                ),
+              ])),
+            ]),
+          ),
+          const SizedBox(height: 16),
+
           // ── Tenure Slider ──────────────────────────────────────────
           _Card(children: [
             _Label('Tenure'),

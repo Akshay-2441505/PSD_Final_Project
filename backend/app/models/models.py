@@ -66,6 +66,7 @@ class LoanApplication(Base):
     risk_score          = Column(Integer, nullable=True)           # 0-100
     risk_flags          = Column(JSONB, nullable=True)             # e.g. ["HIGH_DEBT_RATIO"]
     score_breakdown     = Column(JSONB, nullable=True)             # per-rule explanation list
+    repayment_schedule  = Column(JSONB, nullable=True)             # amortization table (generated on approval)
     bank_statement_data = Column(JSONB, nullable=True)             # Mock Account Aggregator dump
     admin_remarks       = Column(Text, nullable=True)
     created_at          = Column(DateTime(timezone=True), server_default=func.now())

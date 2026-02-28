@@ -15,6 +15,7 @@ class _State extends State<ApplicationsListScreen>
   final _api = AdminApiService();
   List<dynamic> _apps     = [];
   List<dynamic> _filtered = [];
+  Map<String, dynamic>? _stats; // portfolio analytics
   bool          _loading  = true;
   String        _selected = 'ALL';
 
@@ -26,7 +27,12 @@ class _State extends State<ApplicationsListScreen>
     setState(() => _loading = true);
     try {
       final token = context.read<AdminAuthProvider>().token!;
-      _apps = await _api.getApplications(token);
+      final results = await Future.wait([
+        _api.getApplications(token),
+        _api.getPortfolioStats(token),
+      ]);
+      _apps  = results[0] as List;
+      _stats = results[1] as Map<String, dynamic>?;
       _applyFilter();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(
@@ -82,6 +88,37 @@ class _State extends State<ApplicationsListScreen>
             const SizedBox(width: 10),
             _StatPill(label: 'Rejected', value: _count('REJECTED'), color: kError),
           ]),
+          const SizedBox(height: 12),
+
+          // ── Portfolio analytics row ───────────────────────────────
+          if (_stats != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 10),
+              decoration: BoxDecoration(
+                color: kPrimary.withOpacity(0.04),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: kPrimary.withOpacity(0.08)),
+              ),
+              child: Row(children: [
+                _AnalyticsTile(
+                    icon: Icons.account_balance_wallet_rounded,
+                    label: 'Total Disbursed',
+                    value: _fmt(_stats!['total_disbursed']),
+                    color: kSuccess),
+                _vDivider(),
+                _AnalyticsTile(
+                    icon: Icons.check_circle_rounded,
+                    label: 'Approval Rate',
+                    value: '${_stats!['approval_rate']}%',
+                    color: kPrimary),
+                _vDivider(),
+                _AnalyticsTile(
+                    icon: Icons.shield_rounded,
+                    label: 'Avg Risk Score',
+                    value: '${_stats!['avg_risk_score']}',
+                    color: kWarning),
+              ]),
+            ),
           const SizedBox(height: 16),
         ]),
       ),
@@ -375,3 +412,25 @@ class _RefreshButton extends StatelessWidget {
 extension _StrExt on String {
   String capitalizeFirst() => isEmpty ? this : this[0].toUpperCase() + substring(1).toLowerCase();
 }
+
+// ── Analytics Tile ─────────────────────────────────────────────────────────────
+class _AnalyticsTile extends StatelessWidget {
+  final IconData icon;
+  final String label, value;
+  final Color color;
+  const _AnalyticsTile({required this.icon, required this.label, required this.value, required this.color});
+  @override Widget build(BuildContext context) => Expanded(child: Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 14),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Icon(icon, size: 13, color: color),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 10, color: kTextMuted, fontWeight: FontWeight.w600)),
+      ]),
+      const SizedBox(height: 4),
+      Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: color)),
+    ]),
+  ));
+}
+
+Widget _vDivider() => Container(width: 1, height: 40, color: const Color(0xFFEEEEEE));

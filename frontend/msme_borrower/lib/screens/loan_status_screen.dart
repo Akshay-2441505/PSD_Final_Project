@@ -121,8 +121,20 @@ class _LoanStatusScreenState extends State<LoanStatusScreen>
                             .toList() ?? const [],
                       ),
 
+                    // ── Repayment Schedule ───────────────────────────────
+                    if (_loan!['status'] == 'APPROVED' &&
+                        _loan!['repayment_schedule'] != null) ...[
+                      const SizedBox(height: 20),
+                      _RepaymentScheduleCard(
+                        schedule: (_loan!['repayment_schedule'] as List)
+                            .map((e) => Map<String, dynamic>.from(e as Map))
+                            .toList(),
+                        loan: _loan!,
+                      ),
+                    ],
+
                     // ── Rejected CTA ─────────────────────────────────────
-                    if (_loan!['status'] == 'REJECTED') ...[ 
+                    if (_loan!['status'] == 'REJECTED') ...[
                       const SizedBox(height: 20),
                       _RejectedCta(),
                     ],
@@ -540,6 +552,161 @@ class _RiskCard extends StatelessWidget {
       ]),
     );
   }
+}
+
+// ── Repayment Schedule Card ─────────────────────────────────────────────────
+class _RepaymentScheduleCard extends StatefulWidget {
+  final List<Map<String, dynamic>> schedule;
+  final Map<String, dynamic> loan;
+  const _RepaymentScheduleCard({required this.schedule, required this.loan});
+  @override State<_RepaymentScheduleCard> createState() => _RepaymentScheduleCardState();
+}
+
+class _RepaymentScheduleCardState extends State<_RepaymentScheduleCard> {
+  bool _expanded = false;
+
+  String _fmtAmt(dynamic v) {
+    final n = (v is num) ? v.toDouble() : double.tryParse('$v') ?? 0;
+    return '₹${n.toStringAsFixed(0)}';
+  }
+
+  @override Widget build(BuildContext context) {
+    final schedule = widget.schedule;
+    final emi    = schedule.isNotEmpty ? (schedule[0]['emi'] as num).toDouble() : 0;
+    final total  = emi * schedule.length;
+    final amount = (widget.loan['requested_amount'] as num?)?.toDouble() ?? 0;
+    final interest = total - amount;
+    final tenure = schedule.length;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12)],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // Header
+        Row(children: [
+          const Icon(Icons.calendar_month_rounded, color: kPrimary, size: 20),
+          const SizedBox(width: 8),
+          const Text('Repayment Schedule',
+              style: TextStyle(fontWeight: FontWeight.w700, color: kTextDark, fontSize: 15)),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: kPrimary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text('12% p.a.', style: TextStyle(fontSize: 11, color: kPrimary, fontWeight: FontWeight.w700)),
+          ),
+        ]),
+        const SizedBox(height: 14),
+
+        // Summary row
+        Row(children: [
+          _StatChip(label: 'Monthly EMI', value: _fmtAmt(emi), color: kPrimary),
+          const SizedBox(width: 10),
+          _StatChip(label: 'Total Repay', value: _fmtAmt(total), color: kTextDark),
+          const SizedBox(width: 10),
+          _StatChip(label: 'Total Interest', value: _fmtAmt(interest), color: kError),
+        ]),
+        const SizedBox(height: 14),
+
+        // Progress bar: paid vs pending
+        const Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text('Payment Progress', style: TextStyle(fontSize: 12, color: kTextMuted, fontWeight: FontWeight.w600)),
+          Text('0 of _ paid', style: TextStyle(fontSize: 12, color: kTextMuted)),
+        ]),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: 0,
+            minHeight: 6,
+            backgroundColor: kPrimary.withOpacity(0.1),
+            valueColor: const AlwaysStoppedAnimation(kSuccess),
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // Expand/collapse toggle
+        GestureDetector(
+          onTap: () => setState(() => _expanded = !_expanded),
+          child: Row(children: [
+            Text(_expanded ? 'Hide Schedule' : 'View Full Schedule ($tenure months)',
+                style: const TextStyle(fontSize: 13, color: kPrimary, fontWeight: FontWeight.w600)),
+            Icon(_expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                color: kPrimary, size: 18),
+          ]),
+        ),
+
+        // Amortization table
+        if (_expanded) ...[
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0xFFEEEEEE)),
+          const SizedBox(height: 8),
+          // Table header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: kPrimary.withOpacity(0.06),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(children: const [
+              SizedBox(width: 28, child: Text('#', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: kTextMuted))),
+              Expanded(flex: 2, child: Text('Due Date', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: kTextMuted))),
+              Expanded(child: Text('EMI', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: kTextMuted), textAlign: TextAlign.right)),
+              Expanded(child: Text('Principal', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: kTextMuted), textAlign: TextAlign.right)),
+              Expanded(child: Text('Interest', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: kTextMuted), textAlign: TextAlign.right)),
+              Expanded(child: Text('Balance', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: kTextMuted), textAlign: TextAlign.right)),
+            ]),
+          ),
+          const SizedBox(height: 4),
+          ...schedule.map((row) {
+            final n = (row['installment'] as num).toInt();
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: const Color(0xFFEEEEEE).withOpacity(0.5))),
+              ),
+              child: Row(children: [
+                SizedBox(width: 28, child: Text('$n', style: const TextStyle(fontSize: 10, color: kTextMuted))),
+                Expanded(flex: 2, child: Text(
+                  (row['due_date'] as String).substring(2), // "YY-MM-DD"
+                  style: const TextStyle(fontSize: 10, color: kTextDark),
+                )),
+                Expanded(child: Text(_fmtAmt(row['emi']), style: const TextStyle(fontSize: 10, color: kTextDark, fontWeight: FontWeight.w600), textAlign: TextAlign.right)),
+                Expanded(child: Text(_fmtAmt(row['principal']), style: const TextStyle(fontSize: 10, color: kSuccess), textAlign: TextAlign.right)),
+                Expanded(child: Text(_fmtAmt(row['interest']), style: const TextStyle(fontSize: 10, color: kError), textAlign: TextAlign.right)),
+                Expanded(child: Text(_fmtAmt(row['balance']), style: const TextStyle(fontSize: 10, color: kTextMuted), textAlign: TextAlign.right)),
+              ]),
+            );
+          }).toList(),
+        ],
+      ]),
+    );
+  }
+}
+
+class _StatChip extends StatelessWidget {
+  final String label, value;
+  final Color color;
+  const _StatChip({required this.label, required this.value, required this.color});
+  @override Widget build(BuildContext context) => Expanded(child: Container(
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.06),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: color.withOpacity(0.15)),
+    ),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label, style: const TextStyle(fontSize: 9, color: kTextMuted, fontWeight: FontWeight.w600)),
+      const SizedBox(height: 2),
+      Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: color)),
+    ]),
+  ));
 }
 
 // ── Rejected CTA ───────────────────────────────────────────────────────────────

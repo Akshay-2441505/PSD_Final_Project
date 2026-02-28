@@ -9,7 +9,7 @@ from typing import List
 from app.core.database import get_db
 from app.core.dependencies import get_current_admin
 from app.models.models import (
-    LoanApplication, BorrowerProfile, ApplicationStatusLog, AdminUser
+    LoanApplication, BorrowerProfile, ApplicationStatusLog, AdminUser, LoanStatus
 )
 from app.schemas.schemas import (
     AdminApplicationListItem, AdminApplicationDetail,
@@ -17,6 +17,37 @@ from app.schemas.schemas import (
 )
 
 router = APIRouter()
+
+
+# ── GET /admin/portfolio/stats ─────────────────────────────────────────────
+@router.get("/portfolio/stats")
+def portfolio_stats(
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin),
+):
+    """Portfolio-level summary for the admin dashboard."""
+    all_loans = db.query(LoanApplication).all()
+    total = len(all_loans)
+    approved = [l for l in all_loans if l.status == LoanStatus.APPROVED]
+    rejected = [l for l in all_loans if l.status == LoanStatus.REJECTED]
+    pending  = [l for l in all_loans if l.status in {LoanStatus.PENDING, LoanStatus.UNDER_REVIEW}]
+
+    total_disbursed = sum(float(l.requested_amount) for l in approved)
+    approval_rate   = round(len(approved) / total * 100, 1) if total else 0
+    avg_risk_score  = (
+        round(sum(l.risk_score for l in all_loans if l.risk_score) / total, 1)
+        if total else 0
+    )
+
+    return {
+        "total_applications":  total,
+        "approved_count":      len(approved),
+        "rejected_count":      len(rejected),
+        "pending_count":       len(pending),
+        "total_disbursed":     total_disbursed,
+        "approval_rate":       approval_rate,
+        "avg_risk_score":      avg_risk_score,
+    }
 
 
 # ── GET /admin/applications ───────────────────────────────────────────────
@@ -106,9 +137,21 @@ def make_decision(
     if not loan:
         raise HTTPException(status_code=404, detail="Application not found")
 
+    from app.services.amortization import generate_schedule
+    from datetime import datetime
+
     old_status = loan.status
     loan.status = payload.decision
     loan.admin_remarks = payload.remarks
+
+    # On approval — generate & store full amortization schedule
+    if str(payload.decision) in ("APPROVED", LoanStatus.APPROVED.value):
+        schedule = generate_schedule(
+            principal=float(loan.requested_amount),
+            tenure_months=loan.tenure_months,
+            start_date=datetime.utcnow(),
+        )
+        loan.repayment_schedule = schedule
 
     log = ApplicationStatusLog(
         app_id=app_id,
