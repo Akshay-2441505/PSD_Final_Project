@@ -22,6 +22,9 @@ class _LoanApplyScreenState extends State<LoanApplyScreen> {
   bool   _aaFetch        = false;
   bool   _profileLoaded  = false; // true once financials auto-filled
   bool   _editFinancials = false; // unlocked by user explicitly
+  bool   _hasActiveLoan  = false; // true if borrower already has an approved loan
+  String? _activeLoanId;
+  double? _activeLoanAmount;
 
   final List<Map<String,String>> _purposes = [
     {'value': 'WORKING_CAPITAL',   'label': 'Working Capital'},
@@ -61,17 +64,33 @@ class _LoanApplyScreenState extends State<LoanApplyScreen> {
 
   /// Reads the borrower's stored annual_turnover & annual_profit from their profile
   /// (set during registration) and pre-fills the form. The user can still edit.
+  /// Also checks for an existing active approved loan.
   Future<void> _prefillFromProfile() async {
     try {
       final token = context.read<AuthProvider>().token!;
-      final profile = await _api.getMyProfile(token);
+      final results = await Future.wait([
+        _api.getMyProfile(token),
+        _api.getMyLoans(token),
+      ]);
       if (!mounted) return;
+      final profile = results[0] as Map<String, dynamic>;
+      final loans   = results[1] as List;
       final turnover = profile['annual_turnover'];
       final profit   = profile['annual_profit'];
+      // Check for any active APPROVED loan
+      final activeLoan = loans.firstWhere(
+        (l) => (l as Map)['status'] == 'APPROVED',
+        orElse: () => null,
+      ) as Map<String, dynamic>?;
       setState(() {
         if (turnover != null) _turnoverCtrl.text = turnover.toString();
         if (profit   != null) _profitCtrl.text   = profit.toString();
-        _profileLoaded = (turnover != null);
+        _profileLoaded   = (turnover != null);
+        _hasActiveLoan   = activeLoan != null;
+        _activeLoanId    = activeLoan?['app_id'] as String?;
+        _activeLoanAmount = activeLoan != null
+            ? (activeLoan['requested_amount'] as num?)?.toDouble()
+            : null;
       });
     } catch (_) {} // silent — user can always fill manually
   }
@@ -99,9 +118,48 @@ class _LoanApplyScreenState extends State<LoanApplyScreen> {
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: kError),
-      );
+      final msg = e.toString();
+      // Detect 409 active-loan conflict
+      if (msg.contains('ACTIVE_LOAN_EXISTS') || msg.contains('409')) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Row(children: [
+              Icon(Icons.info_rounded, color: kWarning),
+              SizedBox(width: 8),
+              Text('Active Loan Exists', style: TextStyle(fontSize: 16)),
+            ]),
+            content: const Text(
+              'You already have an approved loan that is currently active.\n\n'
+              'Please repay your existing loan before applying for a new one.',
+              style: TextStyle(fontSize: 13, height: 1.5),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kPrimary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: () { Navigator.pop(ctx); Navigator.pop(context); },
+                child: const Text('View My Loans', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg.replaceAll('Exception: ', '')),
+            backgroundColor: kError,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -114,6 +172,34 @@ class _LoanApplyScreenState extends State<LoanApplyScreen> {
       body: Form(
         key: _formKey,
         child: ListView(padding: const EdgeInsets.all(20), children: [
+          // ── Active Loan Warning Banner ─────────────────────────────
+          if (_hasActiveLoan) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: kWarning.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: kWarning.withOpacity(0.4), width: 1.5),
+              ),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Icon(Icons.warning_amber_rounded, color: kWarning, size: 22),
+                const SizedBox(width: 12),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('Active Loan Detected',
+                      style: TextStyle(fontWeight: FontWeight.w700, color: kWarning, fontSize: 14)),
+                  const SizedBox(height: 4),
+                  Text(
+                    'You already have an approved loan'
+                    '${_activeLoanAmount != null ? " of ₹${_fmtAmount(_activeLoanAmount!)}" : ""}.'
+                    ' You must repay it before applying for a new one.',
+                    style: const TextStyle(fontSize: 12, color: kTextMuted, height: 1.5),
+                  ),
+                ])),
+              ]),
+            ),
+          ],
+
           // ── Loan Amount Slider ─────────────────────────────────────
           _Card(children: [
             _Label('Loan Amount'),

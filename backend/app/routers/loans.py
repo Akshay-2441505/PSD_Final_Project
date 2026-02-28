@@ -26,6 +26,23 @@ def apply_for_loan(
     borrower: BorrowerProfile = Depends(get_current_borrower),
 ):
     """Submit a new loan application. Rule engine runs automatically."""
+    # ── Guard: block new application if borrower already has an active loan ──
+    active_loan = db.query(LoanApplication).filter(
+        LoanApplication.business_id == borrower.business_id,
+        LoanApplication.status == LoanStatus.APPROVED,
+    ).first()
+    if active_loan:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "ACTIVE_LOAN_EXISTS",
+                "message": "You already have an active approved loan. "
+                           "Please repay it before applying for a new one.",
+                "active_loan_id": str(active_loan.app_id),
+                "approved_amount": float(active_loan.requested_amount),
+            },
+        )
+
     # Run risk engine — returns (score, flags, breakdown)
     risk_score, risk_flags, score_breakdown = evaluate_risk(
         requested_amount=payload.requested_amount,
