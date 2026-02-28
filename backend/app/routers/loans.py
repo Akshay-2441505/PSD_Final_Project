@@ -26,8 +26,8 @@ def apply_for_loan(
     borrower: BorrowerProfile = Depends(get_current_borrower),
 ):
     """Submit a new loan application. Rule engine runs automatically."""
-    # Run mock rule engine
-    risk_score, risk_flags = evaluate_risk(
+    # Run risk engine — returns (score, flags, breakdown)
+    risk_score, risk_flags, score_breakdown = evaluate_risk(
         requested_amount=payload.requested_amount,
         tenure_months=payload.tenure_months,
         declared_turnover=payload.declared_turnover or 0,
@@ -45,6 +45,7 @@ def apply_for_loan(
         status=LoanStatus.PENDING,
         risk_score=risk_score,
         risk_flags=risk_flags,
+        score_breakdown=score_breakdown,
     )
     db.add(loan)
     db.flush()  # get loan.app_id before committing

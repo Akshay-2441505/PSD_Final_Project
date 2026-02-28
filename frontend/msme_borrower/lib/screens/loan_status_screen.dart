@@ -116,6 +116,9 @@ class _LoanStatusScreenState extends State<LoanStatusScreen>
                       _RiskCard(
                         score: _loan!['risk_score'] as int,
                         flags: List<String>.from(_loan!['risk_flags'] ?? []),
+                        breakdown: (_loan!['score_breakdown'] as List?)
+                            ?.map((e) => Map<String, dynamic>.from(e as Map))
+                            .toList() ?? const [],
                       ),
 
                     // ── Rejected CTA ─────────────────────────────────────
@@ -428,7 +431,12 @@ class _RemarksCard extends StatelessWidget {
 class _RiskCard extends StatelessWidget {
   final int score;
   final List<String> flags;
-  const _RiskCard({required this.score, required this.flags});
+  final List<Map<String, dynamic>> breakdown;
+  const _RiskCard({
+    required this.score,
+    required this.flags,
+    this.breakdown = const [],
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -473,7 +481,50 @@ class _RiskCard extends StatelessWidget {
             ),
           ),
         ]),
-        if (flags.isNotEmpty) ...[ 
+
+        // Score breakdown (simplified borrower view)
+        if (breakdown.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          const Divider(height: 1, color: Color(0xFFEEEEEE)),
+          const SizedBox(height: 10),
+          const Text('Score Breakdown',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: kTextMuted)),
+          const SizedBox(height: 8),
+          ...breakdown.where((item) => (item['impact'] as num? ?? 0) != 0).map((item) {
+            final impact = (item['impact'] as num? ?? 0).toInt();
+            final rule   = item['rule'] as String? ?? '';
+            final detail = item['detail'] as String? ?? '';
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: kError.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text('$impact pts',
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: kError)),
+                ),
+                const SizedBox(width: 8),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(rule, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: kTextDark)),
+                  const SizedBox(height: 2),
+                  Text(detail, style: const TextStyle(fontSize: 11, color: kTextMuted, height: 1.4)),
+                ])),
+              ]),
+            );
+          }).toList(),
+          if (breakdown.every((item) => (item['impact'] as num? ?? 0) == 0)) ...[
+            const Row(children: [
+              Icon(Icons.check_circle_rounded, size: 13, color: kSuccess),
+              SizedBox(width: 4),
+              Text('No risk factors detected — excellent profile!',
+                  style: TextStyle(fontSize: 11, color: kSuccess)),
+            ]),
+          ],
+        ] else if (flags.isNotEmpty) ...[
           const SizedBox(height: 14),
           Wrap(spacing: 8, runSpacing: 6,
             children: flags.map((f) => Container(

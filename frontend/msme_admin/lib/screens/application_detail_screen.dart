@@ -139,8 +139,12 @@ class _State extends State<ApplicationDetailScreen> {
                     ]),
                     const SizedBox(height: 20),
 
-                    // Risk assessment
-                    _RiskCard(score: score, flags: flags),
+                    // Risk assessment with score breakdown
+                    _RiskCard(
+                      score: score,
+                      flags: flags,
+                      breakdown: (_detail?['score_breakdown'] as List?)?.cast<Map<String,dynamic>>() ?? const [],
+                    ),
 
                     // Admin remarks (read-only, if already set and can't decide)
                     if (!canDecide && (app['admin_remarks'] as String? ?? '').isNotEmpty) ...[ 
@@ -438,11 +442,14 @@ class _StatusBadge extends StatelessWidget {
 class _RiskCard extends StatelessWidget {
   final int score;
   final List<String> flags;
-  const _RiskCard({required this.score, required this.flags});
+  final List<Map<String, dynamic>> breakdown;
+  const _RiskCard({required this.score, required this.flags, this.breakdown = const []});
+
   @override Widget build(BuildContext context) {
     final color = score >= 70 ? kSuccess : score >= 45 ? kWarning : kError;
     final label = score >= 70 ? 'Low Risk' : score >= 45 ? 'Moderate Risk' : 'High Risk';
     return _SectionCard(title: 'Risk Assessment', children: [
+      // Score gauge row
       Row(children: [
         Container(
           width: 72, height: 72,
@@ -469,32 +476,78 @@ class _RiskCard extends StatelessWidget {
               valueColor: AlwaysStoppedAnimation(color),
             )),
           ),
-          if (flags.isEmpty) ...[ 
-            const SizedBox(height: 6),
-            const Row(children: [
-              Icon(Icons.check_circle_rounded, color: kSuccess, size: 13),
-              SizedBox(width: 4),
-              Text('No risk flags detected', style: TextStyle(fontSize: 11, color: kSuccess)),
-            ]),
-          ],
         ])),
       ]),
-      if (flags.isNotEmpty) ...[ 
-        const SizedBox(height: 14),
-        Wrap(spacing: 8, runSpacing: 6, children: flags.map((f) => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: kError.withOpacity(0.07),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: kError.withOpacity(0.25)),
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.warning_amber_rounded, size: 11, color: kError),
-            const SizedBox(width: 4),
-            Text(f.replaceAll('_', ' '),
-                style: const TextStyle(fontSize: 11, color: kError, fontWeight: FontWeight.w600)),
-          ]),
-        )).toList()),
+
+      // Score breakdown table
+      if (breakdown.isNotEmpty) ...[
+        const SizedBox(height: 16),
+        const Divider(height: 1, color: Color(0xFFEEECF5)),
+        const SizedBox(height: 12),
+        Row(children: const [
+          Expanded(flex: 3, child: Text('Rule', style: TextStyle(fontSize: 10, color: kTextMuted, fontWeight: FontWeight.w600))),
+          SizedBox(width: 8),
+          Text('Impact', style: TextStyle(fontSize: 10, color: kTextMuted, fontWeight: FontWeight.w600)),
+        ]),
+        const SizedBox(height: 6),
+        ...breakdown.map((item) {
+          final impact     = (item['impact'] as num? ?? 0).toInt();
+          final rule       = item['rule'] as String? ?? '';
+          final detail     = item['detail'] as String? ?? '';
+          final severity   = item['severity'] as String? ?? 'ok';
+          final impactColor = impact < 0 ? kError : kSuccess;
+          final bgColor    = severity == 'high'
+              ? kError.withOpacity(0.04)
+              : severity == 'medium'
+              ? kWarning.withOpacity(0.04)
+              : kSuccess.withOpacity(0.04);
+          return Container(
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: severity == 'high' ? kError.withOpacity(0.15)
+                    : severity == 'medium' ? kWarning.withOpacity(0.15)
+                    : kSuccess.withOpacity(0.15),
+              ),
+            ),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Icon(
+                impact < 0 ? Icons.remove_circle_outline : Icons.check_circle_outline,
+                size: 14,
+                color: impactColor,
+              ),
+              const SizedBox(width: 8),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  Text(rule, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: kTextDark)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: impactColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      impact == 0 ? '+0' : '$impact pts',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: impactColor),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 3),
+                Text(detail, style: const TextStyle(fontSize: 11, color: kTextMuted, height: 1.4)),
+              ])),
+            ]),
+          );
+        }).toList(),
+      ] else if (flags.isEmpty) ...[
+        const SizedBox(height: 10),
+        const Row(children: [
+          Icon(Icons.check_circle_rounded, color: kSuccess, size: 13),
+          SizedBox(width: 4),
+          Text('No risk flags detected', style: TextStyle(fontSize: 11, color: kSuccess)),
+        ]),
       ],
     ]);
   }

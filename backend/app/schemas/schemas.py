@@ -72,6 +72,7 @@ class LoanApplicationResponse(BaseModel):
     status: LoanStatus
     risk_score: Optional[int]
     risk_flags: Optional[List[str]]
+    score_breakdown: Optional[List[Any]]
     admin_remarks: Optional[str]
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
