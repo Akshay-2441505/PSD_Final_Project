@@ -27,21 +27,29 @@ class _State extends State<ApplicationDetailScreen> {
   Future<void> _load() async {
     final token = context.read<AdminAuthProvider>().token!;
     final appId = widget.app['app_id'];
+
+    // ── Phase 1: Load application detail (required) ──────────────────────
     try {
-      final results = await Future.wait([
-        _api.getApplicationDetail(token, appId),
-        _api.getExpenseChart(token, appId),
-        _api.getRevenueChart(token, appId),
-      ]);
+      final detail = await _api.getApplicationDetail(token, appId);
       if (mounted) setState(() {
-        _detail      = results[0];
-        _expenseData = results[1];
-        _revenueData = results[2];
-        _loading     = false;
-        // Pre-fill remarks if already set
-        _remarksCtrl.text = results[0]['admin_remarks'] ?? '';
+        _detail  = detail;
+        _loading = false;
+        _remarksCtrl.text = detail['admin_remarks'] ?? '';
       });
-    } catch (_) { if (mounted) setState(() => _loading = false); }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+      return; // Can't proceed without detail
+    }
+
+    // ── Phase 2: Load charts independently (optional — failures are OK) ──
+    final results = await Future.wait([
+      _api.getExpenseChart(token, appId).catchError((_) => <String, dynamic>{}),
+      _api.getRevenueChart(token, appId).catchError((_) => <String, dynamic>{}),
+    ]);
+    if (mounted) setState(() {
+      _expenseData = (results[0] as Map).isNotEmpty ? results[0] as Map<String, dynamic>? : null;
+      _revenueData = (results[1] as Map).isNotEmpty ? results[1] as Map<String, dynamic>? : null;
+    });
   }
 
   Future<void> _submitDecision(String decision) async {
