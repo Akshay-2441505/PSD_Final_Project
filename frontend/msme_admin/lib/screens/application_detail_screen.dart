@@ -126,14 +126,14 @@ class _State extends State<ApplicationDetailScreen> {
                     _ProfileCard(app: app, business: business),
                     const SizedBox(height: 20),
 
-                    // Loan details
+                    // Loan details — use _detail for financials (not in list-item)
                     _SectionCard(title: 'Loan Details', children: [
                       _InfoGrid([
                         _Info('Amount', '₹${_fmt(app['requested_amount'])}'),
                         _Info('Tenure', '${app['tenure_months']} months'),
                         _Info('Purpose', (app['purpose'] ?? '').toString().replaceAll('_', ' ')),
-                        _Info('Turnover', '₹${_fmt(app['declared_turnover'])}'),
-                        _Info('Profit',   '₹${_fmt(app['declared_profit'])}'),
+                        _Info('Turnover', '₹${_fmt(_detail?['declared_turnover'] ?? app['declared_turnover'])}'),
+                        _Info('Profit',   '₹${_fmt(_detail?['declared_profit']   ?? app['declared_profit'])}'),
                         _Info('Status',   status.replaceAll('_', ' ')),
                       ]),
                     ]),
