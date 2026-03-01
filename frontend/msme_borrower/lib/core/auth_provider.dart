@@ -68,6 +68,14 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
     try {
       await _api.registerBorrower(data);
+      // Auto-login immediately after registration so the JWT token is available
+      // for the FinancialSetupScreen that follows straight after signup.
+      final loginRes = await _api.loginBorrower(
+        data['email'] as String,
+        data['password'] as String,
+      );
+      _token = loginRes['access_token'];
+      await _storage.write(key: 'jwt_token', value: _token);
       _error = null;
       return true;
     } catch (e) {
