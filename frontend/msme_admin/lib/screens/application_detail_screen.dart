@@ -232,7 +232,7 @@ class _State extends State<ApplicationDetailScreen> {
                             label: 'Request More Info',
                             icon: Icons.help_outline_rounded,
                             color: kWarning,
-                            onTap: () => _confirmAndSubmit('UNDER_REVIEW'),
+                            onTap: () => _confirmAndSubmit('MORE_INFO_REQUESTED'),
                           ),
                           const SizedBox(height: 8),
                           _DecisionBtn(
