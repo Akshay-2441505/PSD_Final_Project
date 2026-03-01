@@ -1,19 +1,16 @@
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from .config import settings
 
-engine = create_engine(settings.DATABASE_URL)
-
-@event.listens_for(engine, "connect")
-def _set_public_search_path(dbapi_conn, connection_record):
-    """
-    Explicitly set search_path = public on every new connection.
-    This guards against any stale search_path cached by the Supabase
-    connection pooler (PgBouncer), e.g. after running pytest with test_schema.
-    """
-    cursor = dbapi_conn.cursor()
-    cursor.execute("SET search_path TO public")
-    cursor.close()
+# connect_args options sets the search_path as a PostgreSQL startup parameter.
+# This is the ONLY reliable way to override search_path when Supabase uses
+# PgBouncer (transaction pooling) — because PgBouncer reuses physical connections
+# and SQLAlchemy's 'connect' event only fires for brand-new TCP connections.
+# Startup parameters are always re-applied by PgBouncer on every checkout.
+engine = create_engine(
+    settings.DATABASE_URL,
+    connect_args={"options": "-c search_path=public"},
+)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
