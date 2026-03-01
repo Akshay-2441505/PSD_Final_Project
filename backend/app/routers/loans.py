@@ -43,12 +43,16 @@ def apply_for_loan(
             },
         )
 
+    # Resolve financials: use borrower profile as fallback if not explicitly declared
+    declared_turnover = payload.declared_turnover or float(borrower.annual_turnover or 0)
+    declared_profit   = payload.declared_profit   or float(borrower.annual_profit   or 0)
+
     # Run risk engine — returns (score, flags, breakdown)
     risk_score, risk_flags, score_breakdown = evaluate_risk(
         requested_amount=payload.requested_amount,
         tenure_months=payload.tenure_months,
-        declared_turnover=payload.declared_turnover or 0,
-        declared_profit=payload.declared_profit or 0,
+        declared_turnover=declared_turnover,
+        declared_profit=declared_profit,
         has_gstin=bool(borrower.gstin),
     )
 
@@ -57,8 +61,8 @@ def apply_for_loan(
         requested_amount=payload.requested_amount,
         tenure_months=payload.tenure_months,
         purpose=payload.purpose,
-        declared_turnover=payload.declared_turnover,
-        declared_profit=payload.declared_profit,
+        declared_turnover=declared_turnover,
+        declared_profit=declared_profit,
         status=LoanStatus.PENDING,
         risk_score=risk_score,
         risk_flags=risk_flags,

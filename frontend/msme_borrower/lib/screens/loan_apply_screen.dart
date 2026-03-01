@@ -108,8 +108,8 @@ class _LoanApplyScreenState extends State<LoanApplyScreen> {
         'requested_amount':  _amount,
         'tenure_months':     _tenure,
         'purpose':           _purpose,
-        'declared_turnover': double.tryParse(_turnoverCtrl.text) ?? 0,
-        'declared_profit':   double.tryParse(_profitCtrl.text) ?? 0,
+        'declared_turnover': double.tryParse(_turnoverCtrl.text), // null if empty → backend uses profile value
+        'declared_profit':   double.tryParse(_profitCtrl.text),   // null if empty → backend uses profile value
       }, token);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
