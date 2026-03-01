@@ -1,8 +1,9 @@
 """
 conftest.py — Shared pytest fixtures for the MSME Lending API test suite.
 
-Uses the REAL PostgreSQL database with a dedicated test schema so JSONB works.
-All test tables are created, tests run, then tables are dropped — no data pollution.
+Uses the REAL PostgreSQL database with a dedicated 'test_schema' schema so JSONB works.
+The search_path is set PER CONNECTION on the test engine only — it never touches
+the database-level default, so production tables remain untouched after tests finish.
 """
 import os
 import pytest
@@ -13,14 +14,8 @@ from sqlalchemy.orm import sessionmaker
 from app.core.database import Base, get_db
 from app.main import app
 
-# ── PostgreSQL URL (same Supabase DB, test_ prefix for table isolation) ───────
-# We set search_path to a test schema so real tables are untouched.
-_DB_URL = os.environ.get(
-    "TEST_DATABASE_URL",
-    os.environ.get("DATABASE_URL", "")   # fallback to production URL
-)
-
-# If no DATABASE_URL at all, try loading from .env manually
+# ── Load DB URL ────────────────────────────────────────────────────────────────
+_DB_URL = os.environ.get("TEST_DATABASE_URL") or os.environ.get("DATABASE_URL", "")
 if not _DB_URL:
     try:
         from dotenv import load_dotenv
@@ -29,32 +24,34 @@ if not _DB_URL:
     except ImportError:
         pass
 
+# ── Test engine with per-connection search_path (never leaks to prod) ─────────
 _engine = create_engine(_DB_URL)
+
+@event.listens_for(_engine, "connect")
+def _set_test_search_path(dbapi_conn, connection_record):
+    """
+    Runs on every new connection from the TEST engine only.
+    Sets search_path = test_schema so SQLAlchemy resolves tables there.
+    This is NOT ALTER DATABASE — it only lasts for the connection lifetime.
+    """
+    cursor = dbapi_conn.cursor()
+    cursor.execute("SET search_path TO test_schema, public")
+    cursor.close()
+
 _TestSession = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
 
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_db():
-    """
-    Create a fresh copy of all tables in the 'test_schema' PostgreSQL schema.
-    Drop them after the entire test session.
-    """
+    """Create test_schema + all tables once. Drop everything after the session."""
     with _engine.connect() as conn:
         conn.execute(text("CREATE SCHEMA IF NOT EXISTS test_schema"))
         conn.commit()
 
-    # Re-bind metadata to test_schema by setting search_path per connection
-    @event.listens_for(_engine, "connect")
-    def set_search_path(dbapi_conn, connection_record):
-        dbapi_conn.autocommit = True
-        cursor = dbapi_conn.cursor()
-        cursor.execute("SET search_path TO test_schema, public")
-        cursor.close()
-        dbapi_conn.autocommit = False
-
     Base.metadata.create_all(bind=_engine)
     yield
     Base.metadata.drop_all(bind=_engine)
+
     with _engine.connect() as conn:
         conn.execute(text("DROP SCHEMA IF EXISTS test_schema CASCADE"))
         conn.commit()
