@@ -594,20 +594,38 @@ class _RevenueChart extends StatelessWidget {
   final List data;
   const _RevenueChart({required this.data});
 
+  /// Abbreviate "Oct 2025" → "Oct '25"
+  static String _abbr(String month) {
+    final p = month.split(' ');
+    if (p.length < 2) return month;
+    final yr = p[1];
+    return "${p[0]} '${yr.length >= 4 ? yr.substring(2) : yr}";
+  }
+
   @override
   Widget build(BuildContext context) {
     if (data.isEmpty) return const SizedBox();
-    final spots = data.asMap().entries.map((e) =>
-        FlSpot(e.key.toDouble(), (e.value['revenue'] as int) / 1000)).toList();
+
+    // Use num cast — JSONB can return double or int depending on stored value
+    final values = data
+        .map((e) => (e['revenue'] as num).toDouble() / 1000)
+        .toList();
+    final spots = values.asMap().entries
+        .map((e) => FlSpot(e.key.toDouble(), e.value))
+        .toList();
+    final maxY = values.reduce((a, b) => a > b ? a : b);
+
     return Container(
-      height: 180,
-      padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
+      height: 200,
+      padding: const EdgeInsets.fromLTRB(8, 16, 12, 4),
       decoration: BoxDecoration(
         color: kSurface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 14)],
       ),
       child: LineChart(LineChartData(
+        minY: 0,
+        maxY: (maxY * 1.35).ceilToDouble(),
         gridData: FlGridData(
           show: true,
           getDrawingHorizontalLine: (_) =>
@@ -615,23 +633,56 @@ class _RevenueChart extends StatelessWidget {
           drawVerticalLine: false,
         ),
         borderData: FlBorderData(show: false),
+
+        // ── Tooltip: dark bg + white text for good contrast ───────────
+        lineTouchData: LineTouchData(
+          touchTooltipData: LineTouchTooltipData(
+            getTooltipColor: (_) => const Color(0xFF2D2549),
+            getTooltipItems: (touched) => touched.map((s) => LineTooltipItem(
+              '₹${s.y.toStringAsFixed(1)}K',
+              const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700),
+            )).toList(),
+          ),
+        ),
+
         titlesData: FlTitlesData(
+          // ── Bottom: only at integer x positions, abbreviated labels ──
           bottomTitles: AxisTitles(sideTitles: SideTitles(
-            showTitles: true, reservedSize: 24,
-            getTitlesWidget: (v, _) {
-              final i = v.toInt();
+            showTitles: true,
+            reservedSize: 30,
+            interval: 1, // suppresses half-tick duplicates
+            getTitlesWidget: (v, meta) {
+              // Skip non-integer positions that fl_chart sometimes emits
+              if ((v - v.roundToDouble()).abs() > 0.01) return const SizedBox();
+              final i = v.round();
               if (i < 0 || i >= data.length) return const SizedBox();
-              return Text(data[i]['month'],
-                  style: const TextStyle(fontSize: 10, color: kTextMuted));
+              return Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  _abbr(data[i]['month'] as String? ?? ''),
+                  style: const TextStyle(fontSize: 9, color: kTextMuted),
+                ),
+              );
             },
           )),
+          // ── Left: ₹K values with breathing room ──────────────────────
           leftTitles: AxisTitles(sideTitles: SideTitles(
-            showTitles: true, reservedSize: 40,
-            getTitlesWidget: (v, _) => Text('₹${v.toInt()}K',
-                style: const TextStyle(fontSize: 9, color: kTextMuted)),
+            showTitles: true,
+            reservedSize: 48,
+            getTitlesWidget: (v, meta) {
+              if (v == 0) return const SizedBox();
+              return Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: Text('₹${v.toInt()}K',
+                    style: const TextStyle(fontSize: 9, color: kTextMuted)),
+              );
+            },
           )),
-          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
         lineBarsData: [LineChartBarData(
           spots: spots,
@@ -646,7 +697,7 @@ class _RevenueChart extends StatelessWidget {
           belowBarData: BarAreaData(
             show: true,
             gradient: LinearGradient(
-              colors: [kPrimary.withOpacity(0.18), kPrimary.withOpacity(0.0)],
+              colors: [kPrimary.withOpacity(0.18), kPrimary.withOpacity(0)],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -685,7 +736,7 @@ class _ExpensePieChart extends StatelessWidget {
             sectionsSpace: 3,
             centerSpaceRadius: 32,
             sections: data.asMap().entries.map((e) => PieChartSectionData(
-              value: (e.value['percentage'] as int).toDouble(),
+              value: (e.value['percentage'] as num).toDouble(), // JSONB may give double
               color: _colors[e.key % _colors.length],
               radius: 52,
               showTitle: false,
@@ -705,7 +756,7 @@ class _ExpensePieChart extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(child: Text(e.value['category'],
                   style: const TextStyle(fontSize: 11, color: kTextDark))),
-              Text('${e.value['percentage']}%',
+              Text('${(e.value['percentage'] as num).toStringAsFixed(0)}%',
                   style: const TextStyle(fontSize: 11, color: kTextMuted,
                       fontWeight: FontWeight.w600)),
             ]),
