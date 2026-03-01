@@ -1,0 +1,43 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.1, pytest-9.0.2, pluggy-1.6.0
+rootdir: C:\Users\aakur\OneDrive\Desktop\PSD_Final_Project\backend
+plugins: anyio-4.12.1, asyncio-1.3.0, env-1.5.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 3 items
+
+tests\test_loans.py F.F                                                  [100%]
+
+================================== FAILURES ===================================
+___________________________ test_apply_loan_success ___________________________
+tests\test_loans.py:50: in test_apply_loan_success
+    assert db_session_mock.commit.call_count == 2
+E   AssertionError: assert 1 == 2
+E    +  where 1 = <MagicMock name='mock.commit' id='2786908402896'>.call_count
+E    +    where <MagicMock name='mock.commit' id='2786908402896'> = <MagicMock spec='Session' id='2786907391040'>.commit
+__________________________ test_get_my_loans_success __________________________
+tests\test_loans.py:96: in test_get_my_loans_success
+    assert response.status_code == 200
+E   assert 404 == 200
+E    +  where 404 = <Response [404 Not Found]>.status_code
+============================== warnings summary ===============================
+app\core\config.py:4
+  C:\Users\aakur\OneDrive\Desktop\PSD_Final_Project\backend\app\core\config.py:4: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class Settings(BaseSettings):
+
+app\schemas\schemas.py:37
+  C:\Users\aakur\OneDrive\Desktop\PSD_Final_Project\backend\app\schemas\schemas.py:37: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class BorrowerProfileResponse(BaseModel):
+
+app\schemas\schemas.py:64
+  C:\Users\aakur\OneDrive\Desktop\PSD_Final_Project\backend\app\schemas\schemas.py:64: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class LoanApplicationResponse(BaseModel):
+
+app\schemas\schemas.py:162
+  C:\Users\aakur\OneDrive\Desktop\PSD_Final_Project\backend\app\schemas\schemas.py:162: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class FinancialDataResponse(BaseModel):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_loans.py::test_apply_loan_success - AssertionError: assert ...
+FAILED tests/test_loans.py::test_get_my_loans_success - assert 404 == 200
+=================== 2 failed, 1 passed, 4 warnings in 0.88s ===================
