@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../core/constants.dart';
 import '../core/auth_provider.dart';
 import '../core/api_service.dart';
@@ -60,21 +61,10 @@ class _LoanStatusScreenState extends State<LoanStatusScreen>
     return Scaffold(
       backgroundColor: kBackground,
       appBar: AppBar(
-        title: const Text('Loan Details'),
+        title: const Text('Application Status'),
         backgroundColor: kBackground,
         elevation: 0,
         foregroundColor: kTextDark,
-        leading: GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: Container(
-            margin: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-                color: kSurface,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFEEEEEE))),
-            child: const Icon(Icons.arrow_back_ios_rounded, size: 18, color: kTextDark),
-          ),
-        ),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: kPrimary))
@@ -91,54 +81,55 @@ class _LoanStatusScreenState extends State<LoanStatusScreen>
                       ),
                     ),
 
-                  ListView(padding: const EdgeInsets.all(20), children: [
+                  ListView(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12), children: [
                     // ── Hero Status Card ────────────────────────────────
-                    _HeroStatusCard(loan: _loan!, checkAnim: _checkScale),
-                    const SizedBox(height: 20),
+                    _HeroStatusCard(loan: _loan!, checkAnim: _checkScale).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1),
+                    const SizedBox(height: 24),
 
                     // ── Journey Timeline ─────────────────────────────────
-                    _JourneyTimeline(status: _loan!['status'] as String),
-                    const SizedBox(height: 20),
+                    _JourneyTimeline(status: _loan!['status'] as String).animate(delay: 100.ms).fadeIn(duration: 400.ms).slideY(begin: 0.1),
+                    const SizedBox(height: 24),
 
                     // ── Loan Details Card ────────────────────────────────
-                    _DetailCard(loan: _loan!),
-                    const SizedBox(height: 20),
+                    _DetailCard(loan: _loan!).animate(delay: 200.ms).fadeIn(duration: 400.ms).slideY(begin: 0.1),
+                    const SizedBox(height: 24),
 
                     // ── Admin Remarks ────────────────────────────────────
                     if (_loan!['admin_remarks'] != null &&
                         (_loan!['admin_remarks'] as String).isNotEmpty) ...[ 
-                      _RemarksCard(remarks: _loan!['admin_remarks']),
-                      const SizedBox(height: 20),
+                      _RemarksCard(remarks: _loan!['admin_remarks']).animate(delay: 300.ms).fadeIn(duration: 400.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 24),
                     ],
 
                     // ── Risk Card ────────────────────────────────────────
-                    if (_loan!['risk_score'] != null)
+                    if (_loan!['risk_score'] != null) ...[
                       _RiskCard(
                         score: _loan!['risk_score'] as int,
                         flags: List<String>.from(_loan!['risk_flags'] ?? []),
                         breakdown: (_loan!['score_breakdown'] as List?)
                             ?.map((e) => Map<String, dynamic>.from(e as Map))
                             .toList() ?? const [],
-                      ),
+                      ).animate(delay: 300.ms).fadeIn(duration: 400.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 24),
+                    ],
 
                     // ── Repayment Schedule ───────────────────────────────
                     if (_loan!['status'] == 'APPROVED' &&
                         _loan!['repayment_schedule'] != null) ...[
-                      const SizedBox(height: 20),
                       _RepaymentScheduleCard(
                         schedule: (_loan!['repayment_schedule'] as List)
                             .map((e) => Map<String, dynamic>.from(e as Map))
                             .toList(),
                         loan: _loan!,
-                      ),
+                      ).animate(delay: 300.ms).fadeIn(duration: 400.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 24),
                     ],
 
                     // ── Rejected CTA ─────────────────────────────────────
                     if (_loan!['status'] == 'REJECTED') ...[
-                      const SizedBox(height: 20),
-                      _RejectedCta(),
+                      _RejectedCta().animate(delay: 300.ms).fadeIn(duration: 400.ms).slideY(begin: 0.1),
                     ],
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 48),
                   ]),
                 ]),
     );
@@ -179,18 +170,11 @@ class _HeroStatusCard extends StatelessWidget {
     final isApproved = status == 'APPROVED';
 
     return Container(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: isApproved
-            ? LinearGradient(colors: [const Color(0xFF388E3C), const Color(0xFF4CAF50)],
-                begin: Alignment.topLeft, end: Alignment.bottomRight)
-            : LinearGradient(
-                colors: [color.withOpacity(0.15), color.withOpacity(0.05)]),
-        borderRadius: BorderRadius.circular(24),
-        border: isApproved ? null : Border.all(color: color.withOpacity(0.3), width: 1.5),
-        boxShadow: isApproved
-            ? [BoxShadow(color: kSuccess.withOpacity(0.3), blurRadius: 24, offset: const Offset(0, 8))]
-            : [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12)],
+        color: isApproved ? kSuccess : (status == 'PENDING' ? kWarning : (status == 'REJECTED' ? kError : const Color(0xFF2196F3))),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: isApproved ? kSuccess.withOpacity(0.3) : color.withOpacity(0.2), blurRadius: 16, offset: const Offset(0, 8))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
@@ -198,53 +182,66 @@ class _HeroStatusCard extends StatelessWidget {
           isApproved
               ? ScaleTransition(
                   scale: checkAnim,
-                  child: const Icon(Icons.check_circle_rounded,
-                      color: Colors.white, size: 52),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                    child: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 36),
+                  ),
                 )
               : status == 'PENDING'
-                  ? _PulsingIcon(icon: _icon(status), color: color)
-                  : Icon(_icon(status), color: isApproved ? Colors.white : color, size: 52),
+                  ? Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                      child: _PulsingIcon(icon: _icon(status), color: Colors.white),
+                    )
+                  : Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                      child: Icon(_icon(status), color: Colors.white, size: 36),
+                    ),
           const SizedBox(width: 16),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(
-              isApproved ? '🎉 Congratulations!' : status.replaceAll('_', ' '),
-              style: TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.w700,
-                  color: isApproved ? Colors.white : color),
+              isApproved ? 'Approved!' : status.replaceAll('_', ' '),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
               'Application #${(loan['app_id'] as String).substring(0, 8).toUpperCase()}',
-              style: TextStyle(
-                  fontSize: 12,
-                  color: isApproved ? Colors.white70 : kTextMuted),
+              style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.8)),
             ),
           ])),
         ]),
-        const SizedBox(height: 16),
-        Text(
-          _fmtAmount(loan['requested_amount']),
-          style: TextStyle(
-              fontSize: 28, fontWeight: FontWeight.w800,
-              color: isApproved ? Colors.white : kTextDark),
-        ),
-        Text(
-          '${loan['tenure_months']} months • ${(loan['purpose'] as String).replaceAll('_', ' ')}',
-          style: TextStyle(
-              fontSize: 13,
-              color: isApproved ? Colors.white70 : kTextMuted),
+        const SizedBox(height: 24),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
+          child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Loan Amount', style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.8))),
+              const SizedBox(height: 2),
+              Text(_fmtAmount(loan['requested_amount']), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+            ]),
+            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Text('Tenure', style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.8))),
+              const SizedBox(height: 2),
+              Text('${loan['tenure_months']} mo.', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+            ]),
+          ]),
         ),
         if (isApproved) ...[ 
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: const Text('Your funds will be disbursed within 2-3 business days',
-                style: TextStyle(color: Colors.white, fontSize: 12)),
+            child: Row(children: [
+              const Icon(Icons.flash_on_rounded, color: kSuccess, size: 16),
+              const SizedBox(width: 8),
+              Expanded(child: Text('Funds will be disbursed within 24-48 hours', style: TextStyle(color: kSuccess, fontSize: 12, fontWeight: FontWeight.w600))),
+            ]),
           ),
         ],
       ]),
@@ -298,16 +295,17 @@ class _JourneyTimeline extends StatelessWidget {
     final isRejected  = status == 'REJECTED';
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: kSurface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12)],
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('Application Journey',
-            style: TextStyle(fontWeight: FontWeight.w700, color: kTextDark, fontSize: 15)),
-        const SizedBox(height: 20),
+            style: TextStyle(fontWeight: FontWeight.bold, color: kTextDark, fontSize: 16)),
+        const SizedBox(height: 24),
         Row(
           children: _steps.asMap().entries.map((e) {
             final i       = e.key;
@@ -378,21 +376,23 @@ class _DetailCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(20),
+    padding: const EdgeInsets.all(24),
     decoration: BoxDecoration(
-      color: kSurface,
+      color: Colors.white,
       borderRadius: BorderRadius.circular(20),
-      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12)],
+      border: Border.all(color: const Color(0xFFE2E8F0)),
+      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
     ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const Text('Application Details',
-          style: TextStyle(fontWeight: FontWeight.w700, color: kTextDark, fontSize: 15)),
-      const SizedBox(height: 16),
-      _Row('Amount', _fmtAmount(loan['requested_amount'])),
-      _Row('Tenure', '${loan['tenure_months']} months'),
-      _Row('Purpose', (loan['purpose'] as String).replaceAll('_', ' ')),
-      _Row('Turnover', _fmtAmount(loan['declared_turnover'] ?? 0)),
-      _Row('Profit',   _fmtAmount(loan['declared_profit'] ?? 0)),
+          style: TextStyle(fontWeight: FontWeight.bold, color: kTextDark, fontSize: 16)),
+      const SizedBox(height: 20),
+      _Row('Amount Requested', _fmtAmount(loan['requested_amount'])),
+      _Row('Repayment Tenure', '${loan['tenure_months']} months'),
+      _Row('Loan Purpose', (loan['purpose'] as String).replaceAll('_', ' ')),
+      const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(height: 1, color: Color(0xFFE2E8F0))),
+      _Row('Declared Turnover', _fmtAmount(loan['declared_turnover'] ?? 0)),
+      _Row('Declared Profit',   _fmtAmount(loan['declared_profit'] ?? 0)),
     ]),
   );
 }
@@ -415,25 +415,25 @@ class _RemarksCard extends StatelessWidget {
   final String remarks;
   const _RemarksCard({required this.remarks});
   @override Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(16),
+    padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
       color: const Color(0xFFFFF8E1),
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: kAccent.withOpacity(0.5), width: 1.5),
+      border: Border.all(color: kWarning.withOpacity(0.3), width: 1.5),
     ),
     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Container(
-        padding: const EdgeInsets.all(6),
-        decoration: const BoxDecoration(
-            color: Color(0xFFFFD18C), shape: BoxShape.circle),
-        child: const Icon(Icons.format_quote_rounded, size: 16, color: Colors.white),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+            color: kWarning.withOpacity(0.2), shape: BoxShape.circle),
+        child: const Icon(Icons.format_quote_rounded, size: 18, color: kWarning),
       ),
-      const SizedBox(width: 12),
+      const SizedBox(width: 16),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('Admin Remarks',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: kTextMuted)),
-        const SizedBox(height: 4),
-        Text(remarks, style: const TextStyle(fontSize: 13, color: kTextDark, height: 1.4)),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: kWarning)),
+        const SizedBox(height: 6),
+        Text(remarks, style: const TextStyle(fontSize: 14, color: kTextDark, height: 1.5)),
       ])),
     ]),
   );
@@ -455,16 +455,17 @@ class _RiskCard extends StatelessWidget {
     final color = score >= 70 ? kSuccess : score >= 45 ? kWarning : kError;
     final label = score >= 70 ? 'Low Risk' : score >= 45 ? 'Moderate Risk' : 'High Risk';
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: kSurface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12)],
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('Risk Assessment',
-            style: TextStyle(fontWeight: FontWeight.w700, color: kTextDark, fontSize: 15)),
-        const SizedBox(height: 14),
+            style: TextStyle(fontWeight: FontWeight.bold, color: kTextDark, fontSize: 16)),
+        const SizedBox(height: 20),
         Row(children: [
           Container(
             width: 56, height: 56,
@@ -579,30 +580,34 @@ class _RepaymentScheduleCardState extends State<_RepaymentScheduleCard> {
     final tenure = schedule.length;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: kSurface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12)],
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         // Header
         Row(children: [
-          const Icon(Icons.calendar_month_rounded, color: kPrimary, size: 20),
-          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: kPrimary.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+            child: const Icon(Icons.calendar_month_rounded, color: kPrimary, size: 20)),
+          const SizedBox(width: 12),
           const Text('Repayment Schedule',
-              style: TextStyle(fontWeight: FontWeight.w700, color: kTextDark, fontSize: 15)),
+              style: TextStyle(fontWeight: FontWeight.bold, color: kTextDark, fontSize: 16)),
           const Spacer(),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: kPrimary.withOpacity(0.1),
+              color: kPrimary.withOpacity(0.08),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Text('12% p.a.', style: TextStyle(fontSize: 11, color: kPrimary, fontWeight: FontWeight.w700)),
+            child: const Text('12% p.a.', style: TextStyle(fontSize: 12, color: kPrimary, fontWeight: FontWeight.bold)),
           ),
         ]),
-        const SizedBox(height: 14),
+        const SizedBox(height: 20),
 
         // Summary row
         Row(children: [
@@ -713,35 +718,35 @@ class _StatChip extends StatelessWidget {
 class _RejectedCta extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(20),
+    padding: const EdgeInsets.all(24),
     decoration: BoxDecoration(
       gradient: LinearGradient(
-          colors: [kPrimary.withOpacity(0.08), kPrimary.withOpacity(0.03)]),
+          colors: [kPrimary.withOpacity(0.08), kPrimary.withOpacity(0.02)]),
       borderRadius: BorderRadius.circular(20),
       border: Border.all(color: kPrimary.withOpacity(0.2), width: 1.5),
     ),
     child: Column(children: [
-      const Icon(Icons.support_agent_rounded, color: kPrimary, size: 36),
-      const SizedBox(height: 10),
+      const Icon(Icons.support_agent_rounded, color: kPrimary, size: 40),
+      const SizedBox(height: 12),
       const Text("Don't give up!",
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: kTextDark)),
-      const SizedBox(height: 6),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: kTextDark)),
+      const SizedBox(height: 8),
       const Text(
-          "Improve your credit score, declare higher turnover, or apply for a smaller amount. Our advisors can help.",
-          style: TextStyle(fontSize: 12, color: kTextMuted, height: 1.5),
+          "Improve your credit score, declare higher turnover, or apply for a smaller amount. Our advisors can help you navigate this.",
+          style: TextStyle(fontSize: 13, color: kTextMuted, height: 1.5),
           textAlign: TextAlign.center),
-      const SizedBox(height: 14),
-      SizedBox(width: double.infinity, height: 46,
+      const SizedBox(height: 20),
+      SizedBox(width: double.infinity, height: 50,
         child: OutlinedButton.icon(
           onPressed: () {},
           style: OutlinedButton.styleFrom(
             foregroundColor: kPrimary,
-            side: const BorderSide(color: kPrimary, width: 1.5),
+            side: const BorderSide(color: kPrimary, width: 2),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
-          icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+          icon: const Icon(Icons.chat_bubble_outline_rounded, size: 20),
           label: const Text('Talk to an Advisor',
-              style: TextStyle(fontWeight: FontWeight.w600)),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
         ),
       ),
     ]),

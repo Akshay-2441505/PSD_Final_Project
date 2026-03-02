@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../core/constants.dart';
 import '../core/auth_provider.dart';
 import '../core/api_service.dart';
@@ -168,14 +169,21 @@ class _LoanApplyScreenState extends State<LoanApplyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Apply for Loan')),
+      backgroundColor: kBackground,
+      appBar: AppBar(title: const Text('Apply for Business Loan')),
       body: Form(
         key: _formKey,
-        child: ListView(padding: const EdgeInsets.all(20), children: [
+        child: ListView(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24), children: [
+          
+          const Text('Configure Your Loan', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kPrimary)),
+          const SizedBox(height: 6),
+          const Text('Adjust the amount and tenure to fit your business needs.', style: TextStyle(fontSize: 14, color: kTextMuted)),
+          const SizedBox(height: 24),
+
           // ── Active Loan Warning Banner ─────────────────────────────
           if (_hasActiveLoan) ...[
             Container(
-              margin: const EdgeInsets.only(bottom: 16),
+              margin: const EdgeInsets.only(bottom: 24),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: kWarning.withOpacity(0.08),
@@ -193,118 +201,125 @@ class _LoanApplyScreenState extends State<LoanApplyScreen> {
                     'You already have an approved loan'
                     '${_activeLoanAmount != null ? " of ₹${_fmtAmount(_activeLoanAmount!)}" : ""}.'
                     ' You must repay it before applying for a new one.',
-                    style: const TextStyle(fontSize: 12, color: kTextMuted, height: 1.5),
+                    style: const TextStyle(fontSize: 13, color: kTextDark, height: 1.5),
                   ),
                 ])),
               ]),
-            ),
+            ).animate().fadeIn().slideY(begin: -0.1),
           ],
 
-          // ── Loan Amount Slider ─────────────────────────────────────
+          // ── Loan Amount & Tenure Card ─────────────────────────────────────
           _Card(children: [
-            _Label('Loan Amount'),
-            const SizedBox(height: 8),
+            _Label('Loan Amount Required'),
+            const SizedBox(height: 12),
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               Text('₹ ${_fmtAmount(_amount)}',
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: kPrimary)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: kAccent.withOpacity(0.3), borderRadius: BorderRadius.circular(20)),
-                child: Text('EMI ≈ ₹ ${emiCalc.toStringAsFixed(0)}/mo',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: kTextDark)),
-              ),
+                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: kPrimary, letterSpacing: -0.5)),
             ]),
-            Slider(
-              value: _amount, min: 50000, max: 2000000,
-              divisions: 39, activeColor: kPrimary,
-              label: '₹ ${_fmtAmount(_amount)}',
-              onChanged: (v) => setState(() => _amount = v.roundToDouble()),
+            const SizedBox(height: 8),
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: kPrimary,
+                inactiveTrackColor: kPrimary.withOpacity(0.1),
+                thumbColor: kPrimary,
+                overlayColor: kPrimary.withOpacity(0.2),
+                trackHeight: 6,
+              ),
+              child: Slider(
+                value: _amount, min: 50000, max: 2000000,
+                divisions: 39,
+                label: '₹ ${_fmtAmount(_amount)}',
+                onChanged: (v) => setState(() => _amount = v.roundToDouble()),
+              ),
             ),
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text('₹ 50K', style: const TextStyle(fontSize: 11, color: kTextMuted)),
-              Text('₹ 20L', style: const TextStyle(fontSize: 11, color: kTextMuted)),
+              const Text('₹ 50K', style: TextStyle(fontSize: 12, color: kTextMuted)),
+              const Text('₹ 20L', style: TextStyle(fontSize: 12, color: kTextMuted)),
             ]),
-          ]),
-          const SizedBox(height: 16),
+            
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Divider(height: 1, color: Color(0xFFE2E8F0)),
+            ),
 
-          // ── Interest Rate Info ────────────────────────────────────
+            _Label('Repayment Tenure'),
+            const SizedBox(height: 12),
+            Text('$_tenure months',
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: kPrimary)),
+            const SizedBox(height: 8),
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: kPrimary,
+                inactiveTrackColor: kPrimary.withOpacity(0.1),
+                thumbColor: kPrimary,
+                overlayColor: kPrimary.withOpacity(0.2),
+                trackHeight: 6,
+              ),
+              child: Slider(
+                value: _tenure.toDouble(), min: 3, max: 60,
+                divisions: 19,
+                label: '$_tenure months',
+                onChanged: (v) => setState(() => _tenure = v.toInt()),
+              ),
+            ),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              const Text('3 months', style: TextStyle(fontSize: 12, color: kTextMuted)),
+              const Text('60 months', style: TextStyle(fontSize: 12, color: kTextMuted)),
+            ]),
+          ]).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1),
+          const SizedBox(height: 20),
+
+          // ── EMI & Interest Rate Summary ────────────────────────────────────
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [
-                kPrimary.withOpacity(0.06), kAccent.withOpacity(0.04),
-              ]),
+              color: const Color(0xFFF8FAFC),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: kPrimary.withOpacity(0.15)),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
             ),
             child: Row(children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: kPrimary,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Text('12% p.a.', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
-              ),
-              const SizedBox(width: 14),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Fixed Interest Rate', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: kTextDark)),
-                const SizedBox(height: 2),
-                Text(
-                  'Total Repayment: ₹ ${(emiCalc * _tenure).toStringAsFixed(0)}  ·  Interest: ₹ ${((emiCalc * _tenure) - _amount).toStringAsFixed(0)}',
-                  style: const TextStyle(fontSize: 11, color: kTextMuted),
-                ),
+                const Text('Estimated EMI', style: TextStyle(fontSize: 13, color: kTextMuted)),
+                const SizedBox(height: 4),
+                Text('₹ ${emiCalc.toStringAsFixed(0)} /mo', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: kTextDark)),
+              ])),
+              Container(width: 1, height: 40, color: const Color(0xFFCBD5E1), margin: const EdgeInsets.symmetric(horizontal: 16)),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Interest Rate', style: TextStyle(fontSize: 13, color: kTextMuted)),
+                const SizedBox(height: 4),
+                const Text('12% p.a.', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: kTextDark)),
               ])),
             ]),
-          ),
-          const SizedBox(height: 16),
-
-          // ── Tenure Slider ──────────────────────────────────────────
-          _Card(children: [
-            _Label('Tenure'),
-            const SizedBox(height: 8),
-            Text('$_tenure months',
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: kPrimary)),
-            Slider(
-              value: _tenure.toDouble(), min: 3, max: 60,
-              divisions: 19, activeColor: kPrimary,
-              label: '$_tenure months',
-              onChanged: (v) => setState(() => _tenure = v.toInt()),
-            ),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text('3 months', style: const TextStyle(fontSize: 11, color: kTextMuted)),
-              Text('60 months', style: const TextStyle(fontSize: 11, color: kTextMuted)),
-            ]),
-          ]),
-          const SizedBox(height: 16),
+          ).animate(delay: 100.ms).fadeIn(duration: 400.ms).slideY(begin: 0.1),
+          const SizedBox(height: 24),
 
           // ── Loan Purpose ───────────────────────────────────────────
           _Card(children: [
-            _Label('Loan Purpose'),
-            const SizedBox(height: 10),
+            _Label('What is the loan for?'),
+            const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: _purpose,
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.category_outlined), border: InputBorder.none, filled: false),
+              decoration: const InputDecoration(prefixIcon: Icon(Icons.category_outlined)),
               items: _purposes.map((p) => DropdownMenuItem(value: p['value'], child: Text(p['label']!))).toList(),
               onChanged: (v) => setState(() => _purpose = v!),
             ),
-          ]),
-          const SizedBox(height: 16),
+          ]).animate(delay: 200.ms).fadeIn(duration: 400.ms).slideY(begin: 0.1),
+          const SizedBox(height: 24),
 
           // ── Financial Declaration ──────────────────────────────────
           _Card(children: [
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              _Label('Business Financials (Annual)'),
+              _Label('Business Financials'),
               if (_profileLoaded && !_editFinancials)
                 GestureDetector(
                   onTap: () => setState(() => _editFinancials = true),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(color: kPrimary.withOpacity(0.08), borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE2E8F0)), borderRadius: BorderRadius.circular(12)),
                     child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(Icons.edit_outlined, size: 11, color: kPrimary),
+                      Icon(Icons.edit_outlined, size: 12, color: kTextDark),
                       SizedBox(width: 4),
-                      Text('Override', style: TextStyle(fontSize: 10, color: kPrimary, fontWeight: FontWeight.w600)),
+                      Text('Override', style: TextStyle(fontSize: 11, color: kTextDark, fontWeight: FontWeight.w600)),
                     ]),
                   ),
                 ),
@@ -312,34 +327,34 @@ class _LoanApplyScreenState extends State<LoanApplyScreen> {
                 GestureDetector(
                   onTap: () => setState(() => _editFinancials = false),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(color: kWarning.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
                     child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(Icons.lock_reset, size: 11, color: kWarning),
+                      Icon(Icons.lock_reset, size: 12, color: kWarning),
                       SizedBox(width: 4),
-                      Text('Restore profile', style: TextStyle(fontSize: 10, color: kWarning, fontWeight: FontWeight.w600)),
+                      Text('Restore profile', style: TextStyle(fontSize: 11, color: kWarning, fontWeight: FontWeight.w600)),
                     ]),
                   ),
                 ),
             ]),
-            const SizedBox(height: 10),
+            const SizedBox(height: 16),
 
             // Read-only display when loaded from profile (and user hasn't overridden)
             if (_profileLoaded && !_editFinancials) ...[
               Container(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: kBackground,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFDDDAEE)),
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
                 child: Column(children: [
                   Row(children: [
-                    const Icon(Icons.lock_outline, size: 14, color: kTextMuted),
+                    const Icon(Icons.verified_user_outlined, size: 14, color: kSuccess),
                     const SizedBox(width: 6),
-                    const Text('From your profile', style: TextStyle(fontSize: 11, color: kTextMuted)),
+                    const Text('Auto-filled from your profile', style: TextStyle(fontSize: 12, color: kSuccess, fontWeight: FontWeight.w500)),
                   ]),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 16),
                   Row(children: [
                     Expanded(child: _ReadOnlyField(
                       label: 'Annual Turnover',
@@ -348,7 +363,7 @@ class _LoanApplyScreenState extends State<LoanApplyScreen> {
                           : '—',
                       icon: Icons.trending_up_outlined,
                     )),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 16),
                     Expanded(child: _ReadOnlyField(
                       label: 'Annual Profit',
                       value: _profitCtrl.text.isNotEmpty
@@ -362,24 +377,27 @@ class _LoanApplyScreenState extends State<LoanApplyScreen> {
             ] else ...[
               // Editable fields when not loaded from profile or user overrides
               if (!_profileLoaded)
-                const Text(
-                  'Annual financials not found in your profile. Please enter manually.',
-                  style: TextStyle(fontSize: 11, color: kError),
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    'Annual financials not found in your profile. Please enter manually.',
+                    style: TextStyle(fontSize: 12, color: kError, fontWeight: FontWeight.w500),
+                  ),
                 ),
               if (_editFinancials)
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(color: kWarning.withOpacity(0.07), borderRadius: BorderRadius.circular(8)),
                   child: const Row(children: [
-                    Icon(Icons.warning_amber_rounded, size: 13, color: kWarning),
-                    SizedBox(width: 6),
+                    Icon(Icons.warning_amber_rounded, size: 16, color: kWarning),
+                    SizedBox(width: 8),
                     Expanded(child: Text(
                       'Overriding profile values for this application only.',
-                      style: TextStyle(fontSize: 11, color: kWarning),
+                      style: TextStyle(fontSize: 12, color: kWarning),
                     )),
                   ]),
                 ),
-              const SizedBox(height: 8),
               TextFormField(
                 controller: _turnoverCtrl,
                 keyboardType: TextInputType.number,
@@ -387,7 +405,7 @@ class _LoanApplyScreenState extends State<LoanApplyScreen> {
                     labelText: 'Annual Turnover (₹)', prefixIcon: Icon(Icons.trending_up_outlined)),
                 validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _profitCtrl,
                 keyboardType: TextInputType.number,
@@ -395,45 +413,51 @@ class _LoanApplyScreenState extends State<LoanApplyScreen> {
                     labelText: 'Annual Profit (₹)', prefixIcon: Icon(Icons.account_balance_outlined)),
               ),
             ],
-          ]),
-          const SizedBox(height: 16),
+          ]).animate(delay: 300.ms).fadeIn(duration: 400.ms).slideY(begin: 0.1),
+          const SizedBox(height: 24),
 
           // ── Account Aggregator ─────────────────────────────────────
           _Card(children: [
             Row(children: [
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                _Label('Link Bank Account'),
-                const SizedBox(height: 4),
-                const Text('Share 6-month bank statement via Account Aggregator (simulated)',
-                    style: TextStyle(fontSize: 11, color: kTextMuted)),
+                _Label('Verify Bank Statements'),
+                const SizedBox(height: 6),
+                const Text('Link your bank account via Account Aggregator for instant verification.',
+                    style: TextStyle(fontSize: 12, color: kTextMuted, height: 1.4)),
               ])),
-              Switch(value: _aaFetch, activeColor: kPrimary,
+              Switch(value: _aaFetch, activeColor: kSuccess,
                   onChanged: (v) => setState(() => _aaFetch = v)),
             ]),
             if (_aaFetch)
               Padding(
-                padding: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.only(top: 12),
                 child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: kSuccess.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: kSuccess.withOpacity(0.08), borderRadius: BorderRadius.circular(8)),
                   child: const Row(children: [
                     Icon(Icons.check_circle, color: kSuccess, size: 16),
                     SizedBox(width: 8),
-                    Text('Bank data will be fetched automatically', style: TextStyle(fontSize: 12, color: kSuccess)),
+                    Text('Data will be fetched securely', style: TextStyle(fontSize: 13, color: kSuccess, fontWeight: FontWeight.w500)),
                   ]),
                 ),
               ),
-          ]),
-          const SizedBox(height: 28),
+          ]).animate(delay: 400.ms).fadeIn(duration: 400.ms).slideY(begin: 0.1),
+          const SizedBox(height: 32),
 
           // ── Submit ─────────────────────────────────────────────────
-          ElevatedButton(
-            onPressed: _loading ? null : _submit,
-            child: _loading
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Text('Submit Application'),
-          ),
-          const SizedBox(height: 40),
+          SizedBox(
+            height: 56,
+            child: ElevatedButton(
+              onPressed: _loading ? null : _submit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kAccent, // Primary action color
+              ),
+              child: _loading
+                  ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                  : const Text('Submit Application', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+            ),
+          ).animate(delay: 500.ms).fadeIn(),
+          const SizedBox(height: 48),
         ]),
       ),
     );
@@ -457,9 +481,13 @@ class _Card extends StatelessWidget {
   final List<Widget> children;
   const _Card({required this.children});
   @override Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(color: kSurface, borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8)]),
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: Colors.white, 
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: const Color(0xFFE2E8F0)),
+      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+    ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
   );
 }
@@ -468,7 +496,7 @@ class _Label extends StatelessWidget {
   final String text;
   const _Label(this.text);
   @override Widget build(BuildContext context) => Text(text,
-      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: kPrimary));
+      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: kTextDark));
 }
 
 class _ReadOnlyField extends StatelessWidget {

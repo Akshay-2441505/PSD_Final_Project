@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../core/constants.dart';
 import '../core/auth_provider.dart';
 import 'register_screen.dart';
@@ -10,34 +12,14 @@ class LoginScreen extends StatefulWidget {
   @override State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen>
-    with TickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen> {
   final _formKey   = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passCtrl  = TextEditingController();
   bool _obscure    = true;
 
-  late final AnimationController _bgCtrl;
-  late final AnimationController _cardCtrl;
-  late final Animation<double>   _cardScale;
-
-  @override
-  void initState() {
-    super.initState();
-    _bgCtrl = AnimationController(
-        vsync: this, duration: const Duration(seconds: 6))
-      ..repeat(reverse: true);
-    _cardCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 700));
-    _cardScale =
-        CurvedAnimation(parent: _cardCtrl, curve: Curves.easeOutBack);
-    Future.delayed(const Duration(milliseconds: 100), _cardCtrl.forward);
-  }
-
   @override
   void dispose() {
-    _bgCtrl.dispose();
-    _cardCtrl.dispose();
     _emailCtrl.dispose();
     _passCtrl.dispose();
     super.dispose();
@@ -66,200 +48,184 @@ class _LoginScreenState extends State<LoginScreen>
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     return Scaffold(
-      body: AnimatedBuilder(
-        animation: _bgCtrl,
-        builder: (_, __) {
-          final t = _bgCtrl.value;
-          return Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color.lerp(const Color(0xFF6A3FA0), const Color(0xFF4A2E80), t)!,
-                  Color.lerp(const Color(0xFF7C5CBF), const Color(0xFF9B6BD1), t)!,
-                  Color.lerp(const Color(0xFFB39DDB), const Color(0xFFFF9472), t)!,
-                ],
+      backgroundColor: Colors.white,
+      body: Row(
+        children: [
+          // Left side branding (Visible on wide screens, or takes top half on mobile)
+          if (MediaQuery.of(context).size.width > 800)
+            Expanded(
+              flex: 5,
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: kPrimary,
+                  image: DecorationImage(
+                    image: NetworkImage('https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=2070&auto=format&fit=crop'), // Placeholder for professional business image
+                    fit: BoxFit.cover,
+                    colorFilter: ColorFilter.mode(kPrimary, BlendMode.softLight),
+                  ),
+                ),
+                padding: const EdgeInsets.all(48),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('LENDINGKART', style: kHeading1(context).copyWith(color: Colors.white, fontSize: 32, letterSpacing: 1)),
+                    const SizedBox(height: 8),
+                    Text('Simplifying MSME Finance', style: kHeading2(context).copyWith(color: kAccent, fontStyle: FontStyle.italic)),
+                    const SizedBox(height: 48),
+                    Text('Fast-track Your Business\nwith an Unsecured Loan', style: kHeading1(context).copyWith(color: Colors.white, fontSize: 42, height: 1.2)),
+                    const SizedBox(height: 24),
+                    _FeatureItem(icon: Icons.check_circle_outline, text: 'No Collateral Needed'),
+                    const SizedBox(height: 12),
+                    _FeatureItem(icon: Icons.check_circle_outline, text: 'Flexible Loan Range upto ₹50 Lakhs'),
+                  ],
+                ).animate().fadeIn(duration: 800.ms).slideX(begin: -0.1),
               ),
             ),
-            child: Stack(children: [
-              // Decorative background blobs
-              Positioned(top: -80, right: -80,
-                  child: _Blob(size: 240, color: Colors.white.withOpacity(0.07))),
-              Positioned(bottom: 60, left: -100,
-                  child: _Blob(size: 320, color: Colors.white.withOpacity(0.05))),
-              Positioned(top: 200, left: 30,
-                  child: _Blob(size: 80, color: Colors.white.withOpacity(0.06))),
-
-              // Card
-              Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
-                  child: ScaleTransition(
-                    scale: _cardScale,
-                    child: Container(
-                      constraints: const BoxConstraints(maxWidth: 420),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.96),
-                        borderRadius: BorderRadius.circular(32),
-                        boxShadow: [
-                          BoxShadow(
-                              color: Colors.black.withOpacity(0.18),
-                              blurRadius: 48,
-                              offset: const Offset(0, 20)),
+          
+          // Right side Login Form
+          Expanded(
+            flex: 6,
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 460),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (MediaQuery.of(context).size.width <= 800) ...[
+                          Center(
+                            child: Text('LENDINGKART', style: kHeading1(context).copyWith(color: kPrimary, fontSize: 28, letterSpacing: 1)),
+                          ),
+                          Center(
+                            child: Text('Simplifying MSME Finance', style: kCaption(context).copyWith(color: kAccent, fontStyle: FontStyle.italic, fontSize: 13)),
+                          ),
+                          const SizedBox(height: 48),
                         ],
-                      ),
-                      padding: const EdgeInsets.fromLTRB(32, 36, 32, 36),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // ── Brand ──────────────────────────────────
-                            Column(children: [
-                              Container(
-                                width: 76, height: 76,
-                                decoration: BoxDecoration(
-                                  gradient: kHeroGradient,
-                                  borderRadius: BorderRadius.circular(22),
-                                  boxShadow: [BoxShadow(
-                                      color: kPrimary.withOpacity(0.45),
-                                      blurRadius: 22,
-                                      offset: const Offset(0, 8))],
-                                ),
-                                child: const Icon(
-                                    Icons.account_balance_wallet_rounded,
-                                    color: Colors.white, size: 38),
-                              ),
-                              const SizedBox(height: 16),
-                              Text('MSME Lending',
-                                  style: const TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w800,
-                                      color: kTextDark,
-                                      letterSpacing: -0.5)),
-                              const SizedBox(height: 4),
-                              Text('Your business, funded in 48 hours ⚡',
-                                  style: const TextStyle(
-                                      fontSize: 12, color: kTextMuted)),
-                            ]),
-                            const SizedBox(height: 32),
 
-                            // ── Heading ─────────────────────────────────
-                            const Text('Welcome back 👋',
-                                style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w700,
-                                    color: kTextDark)),
-                            const SizedBox(height: 4),
-                            const Text('Sign in to your account',
-                                style: TextStyle(fontSize: 13, color: kTextMuted)),
-                            const SizedBox(height: 24),
+                        // ── Heading ─────────────────────────────────
+                        Text('Existing User', style: kHeading1(context).copyWith(color: kPrimary)),
+                        const SizedBox(height: 8),
+                        Text('Welcome back! Enter details to proceed', style: TextStyle(fontSize: 15, color: kTextMuted)),
+                        const SizedBox(height: 36),
 
-                            // ── Email ───────────────────────────────────
-                            TextFormField(
-                              controller: _emailCtrl,
-                              keyboardType: TextInputType.emailAddress,
-                              decoration: const InputDecoration(
-                                  labelText: 'Business Email',
-                                  prefixIcon: Icon(Icons.email_outlined)),
-                              validator: (v) => (v == null || !v.contains('@'))
-                                  ? 'Enter a valid email'
-                                  : null,
-                            ),
-                            const SizedBox(height: 14),
-
-                            // ── Password ────────────────────────────────
-                            TextFormField(
-                              controller: _passCtrl,
-                              obscureText: _obscure,
-                              decoration: InputDecoration(
-                                labelText: 'Password',
-                                prefixIcon: const Icon(Icons.lock_outline),
-                                suffixIcon: IconButton(
-                                  icon: Icon(_obscure
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined),
-                                  onPressed: () =>
-                                      setState(() => _obscure = !_obscure),
-                                ),
-                              ),
-                              validator: (v) =>
-                                  (v == null || v.length < 6)
-                                      ? 'Password too short'
-                                      : null,
-                            ),
-                            const SizedBox(height: 28),
-
-                            // ── Login Button ────────────────────────────
-                            SizedBox(
-                              height: 54,
-                              child: ElevatedButton(
-                                onPressed: auth.loading ? null : _submit,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: kPrimary,
-                                  elevation: 4,
-                                  shadowColor: kPrimary.withOpacity(0.4),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16)),
-                                ),
-                                child: auth.loading
-                                    ? const SizedBox(
-                                        height: 22, width: 22,
-                                        child: CircularProgressIndicator(
-                                            color: Colors.white, strokeWidth: 2))
-                                    : const Text('Sign In',
-                                        style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w700,
-                                            color: Colors.white)),
-                              ),
-                            ),
-                            const SizedBox(height: 22),
-
-                            // ── Register link ────────────────────────────
-                            Row(mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                              const Text("New here? ",
-                                  style: TextStyle(color: kTextMuted, fontSize: 13)),
-                              GestureDetector(
-                                onTap: () => Navigator.push(context,
-                                    MaterialPageRoute(
-                                        builder: (_) => const RegisterScreen())),
-                                child: const Text('Create account',
-                                    style: TextStyle(
-                                        color: kPrimary,
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 13)),
-                              ),
-                            ]),
-                          ],
+                        // ── Email ───────────────────────────────────
+                        TextFormField(
+                          controller: _emailCtrl,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: InputDecoration(
+                            labelText: 'Business Email ID',
+                            prefixIcon: const Icon(Icons.email_outlined),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey[300]!)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: kPrimary, width: 2)),
+                          ),
+                          validator: (v) => (v == null || !v.contains('@')) ? 'Enter a valid email' : null,
                         ),
-                      ),
-                    ),
+                        const SizedBox(height: 20),
+
+                        // ── Password ────────────────────────────────
+                        TextFormField(
+                          controller: _passCtrl,
+                          obscureText: _obscure,
+                          decoration: InputDecoration(
+                            labelText: 'Password',
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey[300]!)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: kPrimary, width: 2)),
+                            suffixIcon: IconButton(
+                              icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                              onPressed: () => setState(() => _obscure = !_obscure),
+                            ),
+                          ),
+                          validator: (v) => (v == null || v.length < 6) ? 'Password too short' : null,
+                        ),
+                        const SizedBox(height: 32),
+
+                        // ── Login Button ────────────────────────────
+                        SizedBox(
+                          height: 54,
+                          child: ElevatedButton(
+                            onPressed: auth.loading ? null : _submit,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: kAccent,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              elevation: 2,
+                            ),
+                            child: auth.loading
+                                ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                                : const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text('Sign In', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),   
+                                      SizedBox(width: 8),
+                                      Icon(Icons.arrow_forward_rounded, size: 20, color: Colors.white),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(height: 48),
+
+                        // ── Divider ────────────────────────────
+                        Row(children: [
+                          Expanded(child: Divider(color: Colors.grey[300])),
+                        ]),
+                        const SizedBox(height: 32),
+
+                        // ── Register link ────────────────────────────
+                        Text('New User', style: kHeading1(context).copyWith(color: kPrimary, fontSize: 24)),
+                        const SizedBox(height: 8),
+                         Text('New to Lendingkart? Apply for Business Loan', style: TextStyle(fontSize: 15, color: kTextMuted)),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          height: 54,
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterScreen())),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: kAccent,
+                              side: const BorderSide(color: kAccent, width: 2),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                               children: [
+                                Text('Apply Now', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),   
+                                const SizedBox(width: 8),
+                                const Icon(Icons.arrow_forward_rounded, size: 20),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, curve: Curves.easeOut),
                   ),
                 ),
               ),
-            ]),
-          );
-        },
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _Blob extends StatelessWidget {
-  final double size;
-  final Color color;
-  const _Blob({required this.size, required this.color});
-  @override
-  Widget build(BuildContext context) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      );
-}
+class _FeatureItem extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _FeatureItem({required this.icon, required this.text});
 
-extension WidgetAlso on Widget {
-  Widget also(Widget Function(Widget) fn) => fn(this);
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.white, size: 20),
+        const SizedBox(width: 12),
+        Text(text, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
 }

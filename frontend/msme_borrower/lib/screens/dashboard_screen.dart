@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../core/constants.dart';
 import '../core/auth_provider.dart';
 import '../core/api_service.dart';
@@ -69,6 +70,17 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     return Scaffold(
       backgroundColor: kBackground,
+      // Floating Apply Button - Modern approach
+      floatingActionButton: !_loading ? FloatingActionButton.extended(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const LoanApplyScreen()),
+        ).then((_) => _load()),
+        backgroundColor: kAccent,
+        icon: const Icon(Icons.add_rounded, color: Colors.white),
+        label: const Text('Apply Loan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        elevation: 4,
+      ) : null,
       body: SafeArea(
         child: Stack(children: [
           // ── Content ──────────────────────────────────────────────────
@@ -110,36 +122,33 @@ class _DashboardScreenState extends State<DashboardScreen>
                       // ── Section: My Applications ──────────────────────
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+                          padding: const EdgeInsets.fromLTRB(20, 32, 20, 16),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('My Applications',
-                                  style: TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w700,
-                                      color: kTextDark)),
+                              Text('My Applications',
+                                  style: kHeading2(context).copyWith(color: kTextDark)),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
+                                    horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: kPrimary.withOpacity(0.1),
+                                  color: kPrimary.withOpacity(0.08),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text('${_loans.length} total',
                                     style: const TextStyle(
                                         color: kPrimary,
-                                        fontSize: 12,
+                                        fontSize: 13,
                                         fontWeight: FontWeight.w600)),
                               ),
                             ],
-                          ),
+                          ).animate().fadeIn(duration: 400.ms).slideX(begin: -0.1),
                         ),
                       ),
 
                       // ── Loan Cards ────────────────────────────────────
                       if (_loans.isEmpty)
-                        SliverToBoxAdapter(child: _EmptyState())
+                        SliverToBoxAdapter(child: _EmptyState().animate().fadeIn(duration: 500.ms).scaleXY(begin: 0.95))
                       else
                         SliverList(
                           delegate: SliverChildBuilderDelegate(
@@ -152,7 +161,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                     builder: (_) => LoanStatusScreen(
                                         loanId: _loans[i]['app_id'])),
                               ).then((_) => _load()),
-                            ),
+                            ).animate(delay: (i * 100).ms).fadeIn(duration: 400.ms).slideY(begin: 0.1),
                             childCount: _loans.length,
                           ),
                         ),
@@ -161,15 +170,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                       if (_insights != null) ...[ 
                         SliverToBoxAdapter(
                           child: Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+                            padding: const EdgeInsets.fromLTRB(20, 32, 20, 16),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('Revenue Trend',
-                                    style: TextStyle(
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.w700,
-                                        color: kTextDark)),
+                                Text('Revenue Trend',
+                                    style: kHeading2(context).copyWith(color: kTextDark)),
                                 GestureDetector(
                                   onTap: () async {
                                     final updated = await Navigator.push<bool>(
@@ -181,49 +187,48 @@ class _DashboardScreenState extends State<DashboardScreen>
                                     if (updated == true) _load();
                                   },
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                     decoration: BoxDecoration(
-                                      color: kPrimary.withOpacity(0.1),
+                                      color: Colors.white,
                                       borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(color: kPrimary.withOpacity(0.2)),
+                                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))],
                                     ),
                                     child: const Row(children: [
-                                      Icon(Icons.upload_rounded, size: 13, color: kPrimary),
-                                      SizedBox(width: 4),
-                                      Text('Update Financials',
+                                      Icon(Icons.edit_note_rounded, size: 16, color: kPrimary),
+                                      SizedBox(width: 6),
+                                      Text('Update Data',
                                           style: TextStyle(
                                               color: kPrimary,
-                                              fontSize: 12,
+                                              fontSize: 13,
                                               fontWeight: FontWeight.w600)),
                                     ]),
                                   ),
                                 ),
                               ],
-                            ),
+                            ).animate().fadeIn(duration: 400.ms).slideX(begin: -0.1),
                           ),
                         ),
                         SliverToBoxAdapter(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 20),
                             child: _RevenueChart(
-                                data: _insights!['monthly_revenue'] as List),
+                                data: _insights!['monthly_revenue'] as List).animate().fadeIn(duration: 600.ms).scaleXY(begin: 0.95),
                           ),
                         ),
                         SliverToBoxAdapter(
                           child: Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-                            child: const Text('Expense Breakdown',
-                                style: TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w700,
-                                    color: kTextDark)),
+                            padding: const EdgeInsets.fromLTRB(20, 32, 20, 16),
+                            child: Text('Expense Breakdown',
+                                style: kHeading2(context).copyWith(color: kTextDark))
+                            .animate().fadeIn(duration: 400.ms).slideX(begin: -0.1),
                           ),
                         ),
                         SliverToBoxAdapter(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 20),
                             child: _ExpensePieChart(
-                                data: _insights!['expense_breakdown'] as List),
+                                data: _insights!['expense_breakdown'] as List).animate().fadeIn(duration: 600.ms).scaleXY(begin: 0.95),
                           ),
                         ),
                       ],
@@ -232,43 +237,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                     ],
                   ),
                 ),
-
-          // ── Sticky Apply Button ──────────────────────────────────────
-          Positioned(
-            bottom: 0, left: 0, right: 0,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [kBackground.withOpacity(0), kBackground],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-              child: SizedBox(
-                height: 56,
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const LoanApplyScreen()),
-                  ).then((_) => _load()),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: kPrimary,
-                    elevation: 8,
-                    shadowColor: kPrimary.withOpacity(0.4),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
-                  ),
-                  icon: const Icon(Icons.add_rounded, color: Colors.white),
-                  label: const Text('Apply for a Loan',
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white)),
-                ),
-              ),
-            ),
-          ),
         ]),
       ),
     );
@@ -297,53 +265,57 @@ class _HeroHeader extends StatelessWidget {
 
     return Container(
       decoration: const BoxDecoration(
-        gradient: kHeroGradient,
+        color: kPrimary,
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(32),
           bottomRight: Radius.circular(32),
         ),
       ),
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         // Top row
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(greeting,
-                style: const TextStyle(color: Colors.white70, fontSize: 13)),
-            Text(firstName,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800)),
-          ]),
+          Row(
+            children: [
+              const CircleAvatar(
+                backgroundColor: Colors.white24,
+                radius: 18,
+                child: Icon(Icons.business, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(greeting, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                Text(firstName, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+              ]),
+            ],
+          ),
           Row(children: [
             _IconBtn(icon: Icons.refresh_rounded, onTap: onRefresh),
             const SizedBox(width: 8),
             _IconBtn(icon: Icons.logout_rounded, onTap: onLogout),
           ]),
         ]),
-        const SizedBox(height: 24),
+        const SizedBox(height: 32),
 
         // Amount
-        const Text('Total Approved',
-            style: TextStyle(color: Colors.white60, fontSize: 12)),
+        const Text('Total Loan Approved', style: TextStyle(color: Colors.white70, fontSize: 14)),
         const SizedBox(height: 4),
         _AnimatedAmount(target: approved.toDouble()),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
 
         // Health badge
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
+            color: kAccent.withOpacity(0.15),
             borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: kAccent.withOpacity(0.3)),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.favorite_rounded, color: Colors.white, size: 14),
-            const SizedBox(width: 6),
-            Text('Business Health: $health%',
-                style: const TextStyle(color: Colors.white, fontSize: 12,
-                    fontWeight: FontWeight.w600)),
+            const Icon(Icons.insights_rounded, color: kAccent, size: 16),
+            const SizedBox(width: 8),
+            Text('Business Health Score: $health%',
+                style: const TextStyle(color: kAccent, fontSize: 13, fontWeight: FontWeight.w600)),
           ]),
         ),
       ]),
@@ -420,23 +392,21 @@ class _QuickStats extends StatelessWidget {
     final pending = insights['pending_count'] ?? 0;
     final emi     = insights['next_emi_due'] ?? 'N/A';
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      padding: const EdgeInsets.symmetric(vertical: 20),
       decoration: BoxDecoration(
-        color: kSurface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 16, offset: const Offset(0, 4))],
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Row(
         children: [
-          _Stat(icon: Icons.pending_actions_rounded, label: 'Pending', value: '$pending',
-              color: kWarning),
+          _Stat(icon: Icons.pending_actions_rounded, label: 'Pending Loans', value: '$pending', color: kWarning),
           _Divider(),
-          _Stat(icon: Icons.calendar_month_rounded, label: 'Next EMI', value: emi,
-              color: kPrimary),
+          _Stat(icon: Icons.calendar_month_rounded, label: 'Next EMI Date', value: emi, color: kPrimary),
           _Divider(),
-          _Stat(icon: Icons.verified_rounded, label: 'Status', value: 'Active',
-              color: kSuccess),
+          _Stat(icon: Icons.verified_rounded, label: 'Account Status', value: 'Active', color: kSuccess),
         ],
       ),
     );
@@ -505,54 +475,52 @@ class _LoanCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+        margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
         decoration: BoxDecoration(
-          color: kSurface,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 14, offset: const Offset(0, 4))],
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2))],
         ),
         child: Row(children: [
           // Colored left strip
           Container(
-            width: 5, height: 72,
+            width: 6, height: 80,
             decoration: BoxDecoration(
                 color: color,
                 borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    bottomLeft: Radius.circular(20))),
+                    topLeft: Radius.circular(16),
+                    bottomLeft: Radius.circular(16))),
           ),
           const SizedBox(width: 16),
           // Status icon
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
                 color: color.withOpacity(0.1), shape: BoxShape.circle),
-            child: Icon(_statusIcon(status), color: color, size: 20),
+            child: Icon(_statusIcon(status), color: color, size: 22),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 16),
           // Info
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
               children: [
             Text(_fmtAmount(loan['requested_amount']),
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: kTextDark)),
-            const SizedBox(height: 2),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kTextDark)),
+            const SizedBox(height: 4),
             Text('${loan['tenure_months']} months • ${(loan['purpose'] as String).replaceAll('_', ' ')}',
-                style: const TextStyle(fontSize: 12, color: kTextMuted)),
+                style: const TextStyle(fontSize: 13, color: kTextMuted)),
           ])),
           // Status badge
           Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            margin: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20)),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: color.withOpacity(0.2))),
             child: Text(status.replaceAll('_', ' '),
-                style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700)),
+                style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700)),
           ),
-          const Icon(Icons.chevron_right_rounded, color: kTextMuted, size: 20),
-          const SizedBox(width: 8),
         ]),
       ),
     );

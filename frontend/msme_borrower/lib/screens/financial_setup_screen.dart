@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../core/constants.dart';
 import '../core/auth_provider.dart';
 import '../core/api_service.dart';
@@ -177,37 +178,41 @@ class _FinancialSetupScreenState extends State<FinancialSetupScreen> {
       ),
       body: _prefilling
           ? const Center(child: CircularProgressIndicator(color: kPrimary))
-          : ListView(padding: const EdgeInsets.all(20), children: [
+          : ListView(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24), children: [
               // ── Header ─────────────────────────────────────────────────
               if (widget.isPostRegistration) ...[
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                        colors: [kPrimary.withOpacity(0.08), kAccent.withOpacity(0.05)]),
+                    color: kPrimary.withOpacity(0.04),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: kPrimary.withOpacity(0.15)),
+                    border: Border.all(color: kPrimary.withOpacity(0.1)),
                   ),
                   child: Row(children: [
-                    const Icon(Icons.bar_chart_rounded, color: kPrimary, size: 28),
-                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10)]),
+                      child: const Icon(Icons.bar_chart_rounded, color: kPrimary, size: 24),
+                    ),
+                    const SizedBox(width: 16),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       const Text('Power Up Your Dashboard',
-                          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: kPrimary)),
-                      const SizedBox(height: 4),
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: kPrimary)),
+                      const SizedBox(height: 6),
                       const Text(
                           'Enter your revenue & expenses to see personalised charts. You can update these anytime.',
-                          style: TextStyle(fontSize: 12, color: kTextMuted, height: 1.4)),
+                          style: TextStyle(fontSize: 13, color: kTextMuted, height: 1.4)),
                     ])),
                   ]),
-                ),
-                const SizedBox(height: 20),
+                ).animate().fadeIn().slideY(begin: 0.1),
+                const SizedBox(height: 24),
               ],
 
               // ── Monthly Revenue ─────────────────────────────────────────
               _SectionCard(
-                title: '📈 Monthly Revenue (₹)',
+                title: 'Monthly Revenue',
                 subtitle: 'Enter your revenue for each of the last 6 months',
+                icon: Icons.trending_up_rounded,
                 child: Column(
                   children: List.generate(6, (i) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
@@ -249,20 +254,21 @@ class _FinancialSetupScreenState extends State<FinancialSetupScreen> {
                     ]),
                   )),
                 ),
-              ),
+              ).animate(delay: 100.ms).fadeIn(duration: 400.ms).slideY(begin: 0.1),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
 
               // ── Expense Breakdown ───────────────────────────────────────
               _SectionCard(
-                title: '🥧 Expense Breakdown',
+                title: 'Expense Breakdown',
                 subtitle: 'Drag sliders to set each category\'s share of total expenses',
+                icon: Icons.pie_chart_rounded,
                 child: Column(children: [
                   // Total indicator
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                    const Text('Total', style: TextStyle(fontSize: 12, color: kTextMuted)),
+                    const Text('Total Allocation', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: kTextDark)),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: (_totalExpense - 100).abs() < 1
                             ? kSuccess.withOpacity(0.1)
@@ -272,13 +278,13 @@ class _FinancialSetupScreenState extends State<FinancialSetupScreen> {
                       child: Text(
                         '${_totalExpense.toStringAsFixed(0)}%',
                         style: TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.w700,
+                          fontSize: 13, fontWeight: FontWeight.bold,
                           color: (_totalExpense - 100).abs() < 1 ? kSuccess : kWarning,
                         ),
                       ),
                     ),
                   ]),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 16),
 
                   ...List.generate(6, (i) => Column(children: [
                     Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
@@ -295,54 +301,54 @@ class _FinancialSetupScreenState extends State<FinancialSetupScreen> {
                       inactiveColor: kPrimary.withOpacity(0.12),
                       onChanged: (v) => setState(() => _expensePercents[i] = v),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 8),
                   ])),
                   if ((_totalExpense - 100).abs() > 1)
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: kWarning.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: kWarning.withOpacity(0.3)),
                       ),
                       child: const Row(children: [
-                        Icon(Icons.info_outline, size: 14, color: kWarning),
-                        SizedBox(width: 6),
+                        Icon(Icons.info_outline, size: 16, color: kWarning),
+                        SizedBox(width: 8),
                         Expanded(child: Text(
                           'Percentages don\'t need to add up exactly — they\'ll be normalised to 100% on save.',
-                          style: TextStyle(fontSize: 11, color: kWarning),
+                          style: TextStyle(fontSize: 12, color: kWarning),
                         )),
                       ]),
                     ),
                 ]),
-              ),
+              ).animate(delay: 200.ms).fadeIn(duration: 400.ms).slideY(begin: 0.1),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
 
               // ── Save button ─────────────────────────────────────────────
               SizedBox(
-                height: 52,
+                height: 56,
                 child: ElevatedButton.icon(
                   onPressed: _loading ? null : _save,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: kPrimary,
+                    backgroundColor: kAccent, // Using orange accent for action
                     foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 4,
                   ),
                   icon: _loading
                       ? const SizedBox(
-                          width: 18, height: 18,
+                          width: 20, height: 20,
                           child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                         )
                       : const Icon(Icons.save_rounded, size: 20),
                   label: Text(
                     _loading ? 'Saving…' : 'Save Financial Data',
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
-              ),
-              const SizedBox(height: 40),
+              ).animate(delay: 300.ms).fadeIn(),
+              const SizedBox(height: 48),
             ]),
     );
   }
@@ -352,20 +358,31 @@ class _FinancialSetupScreenState extends State<FinancialSetupScreen> {
 class _SectionCard extends StatelessWidget {
   final String title;
   final String subtitle;
+  final IconData icon;
   final Widget child;
-  const _SectionCard({required this.title, required this.subtitle, required this.child});
+  const _SectionCard({required this.title, required this.subtitle, required this.icon, required this.child});
   @override Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(20),
+    padding: const EdgeInsets.all(24),
     decoration: BoxDecoration(
-      color: kSurface,
+      color: Colors.white,
       borderRadius: BorderRadius.circular(20),
-      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12)],
+      border: Border.all(color: const Color(0xFFE2E8F0)),
+      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
     ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kTextDark)),
+      Row(
+        children: [
+          Icon(icon, color: kPrimary, size: 20),
+          const SizedBox(width: 8),
+          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kTextDark)),
+        ],
+      ),
       const SizedBox(height: 4),
-      Text(subtitle, style: const TextStyle(fontSize: 11, color: kTextMuted)),
-      const SizedBox(height: 16),
+      Text(subtitle, style: const TextStyle(fontSize: 13, color: kTextMuted)),
+      const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Divider(height: 1, color: Color(0xFFE2E8F0)),
+      ),
       child,
     ]),
   );

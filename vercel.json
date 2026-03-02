@@ -1,13 +1,13 @@
 {
     "version": 2,
     "name": "msme-admin-dashboard",
-    "framework": "flutter",
-    "buildCommand": "cd frontend/msme_admin && flutter clean && flutter pub get && flutter build web --release",
-    "outputDirectory": "frontend/msme_admin/build/web",
-    "routes": [
+    "framework": "vite",
+    "buildCommand": "cd frontend/admin_react && npm install && npm run build",
+    "outputDirectory": "frontend/admin_react/dist",
+    "rewrites": [
         {
-            "src": "/(.*)",
-            "dest": "/index.html"
+            "source": "/(.*)",
+            "destination": "/index.html"
         }
     ]
 }
