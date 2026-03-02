@@ -1,0 +1,13 @@
+{
+    "version": 2,
+    "name": "msme-admin-dashboard",
+    "framework": "flutter",
+    "buildCommand": "cd frontend/msme_admin && flutter clean && flutter pub get && flutter build web --release",
+    "outputDirectory": "frontend/msme_admin/build/web",
+    "routes": [
+        {
+            "src": "/(.*)",
+            "dest": "/index.html"
+        }
+    ]
+}
