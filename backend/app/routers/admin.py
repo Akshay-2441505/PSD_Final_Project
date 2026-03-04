@@ -71,6 +71,7 @@ def list_applications(
             app_id=loan.app_id,
             business_id=loan.business_id,
             legal_name=borrower.legal_name,
+            owner_name=borrower.owner_name,
             requested_amount=float(loan.requested_amount),
             tenure_months=loan.tenure_months,
             purpose=loan.purpose,

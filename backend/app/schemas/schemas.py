@@ -106,6 +106,7 @@ class AdminApplicationListItem(BaseModel):
     app_id: UUID
     business_id: UUID
     legal_name: str
+    owner_name: str
     requested_amount: float
     tenure_months: int
     purpose: LoanPurpose

@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import api from '../core/api';
 import { MoreVertical, CheckCircle, XCircle, Clock, Inbox } from 'lucide-react';
 
 export default function Applications() {
     const containerRef = useRef(null);
+    const navigate = useNavigate();
     const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -81,8 +83,8 @@ export default function Applications() {
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
                                     {columnApps.map(app => (
-                                        <div key={app.id} className="card app-card"
-                                            onClick={() => window.location.href = `/applications/${app.id}`}
+                                        <div key={app.app_id} className="card app-card"
+                                            onClick={() => navigate(`/applications/${app.app_id}`)}
                                             style={{ padding: '16px', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
                                             onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.1)'; }}
                                             onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.05)'; }}>
@@ -92,7 +94,9 @@ export default function Applications() {
                                                     <p style={{ margin: 0, fontWeight: '600', color: 'var(--text-dark)' }}>{app.owner_name}</p>
                                                     <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{app.legal_name || 'Business Name'}</p>
                                                 </div>
-                                                <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                                                <button
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                                                     <MoreVertical size={16} />
                                                 </button>
                                             </div>
@@ -100,7 +104,7 @@ export default function Applications() {
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #F1F5F9' }}>
                                                 <div>
                                                     <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Amount</p>
-                                                    <p style={{ margin: 0, fontWeight: '600', color: 'var(--primary)', fontSize: '0.95rem' }}>{formatCurrency(app.amount)}</p>
+                                                    <p style={{ margin: 0, fontWeight: '600', color: 'var(--primary)', fontSize: '0.95rem' }}>{formatCurrency(app.requested_amount)}</p>
                                                 </div>
                                                 <div style={{ textAlign: 'right' }}>
                                                     <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Score</p>

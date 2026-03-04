@@ -64,12 +64,19 @@ export default function Login() {
                         </div>
                     )}
 
+                    {/* Credential hint */}
+                    <div style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', padding: '12px', fontSize: '0.82rem', color: '#1E40AF' }}>
+                        <strong>Default credentials:</strong><br />
+                        Email: <code>arjun.admin@msmelending.com</code><br />
+                        Password: <code>Admin@1234</code>
+                    </div>
+
                     <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                         <div>
                             <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '0.9rem' }}>Admin Email</label>
                             <input
                                 type="email"
-                                placeholder="admin@lendingkart.com"
+                                placeholder="arjun.admin@msmelending.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
