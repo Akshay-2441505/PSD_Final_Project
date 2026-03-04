@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../core/constants.dart';
 import '../core/auth_provider.dart';
 import 'register_screen.dart';
-import 'dashboard_screen.dart';
+import 'main_shell.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,6 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl  = TextEditingController();
   bool _obscure    = true;
+  bool _hasError   = false;
 
   @override
   void dispose() {
@@ -26,13 +27,19 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      setState(() => _hasError = true);
+      Future.delayed(const Duration(milliseconds: 600), () {
+        if (mounted) setState(() => _hasError = false);
+      });
+      return;
+    }
     final auth = context.read<AuthProvider>();
     final ok = await auth.login(_emailCtrl.text.trim(), _passCtrl.text);
     if (!mounted) return;
     if (ok) {
       Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (_) => const DashboardScreen()));
+          context, MaterialPageRoute(builder: (_) => const MainShell()));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -56,12 +63,12 @@ class _LoginScreenState extends State<LoginScreen> {
             Expanded(
               flex: 5,
               child: Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: kPrimary,
                   image: DecorationImage(
-                    image: NetworkImage('https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=2070&auto=format&fit=crop'), // Placeholder for professional business image
+                    image: const NetworkImage('https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=2070&auto=format&fit=crop'), // Placeholder for professional business image
                     fit: BoxFit.cover,
-                    colorFilter: ColorFilter.mode(kPrimary, BlendMode.softLight),
+                    colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.6), BlendMode.darken),
                   ),
                 ),
                 padding: const EdgeInsets.all(48),
@@ -201,9 +208,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ],
-                    ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, curve: Curves.easeOut),
+                    ).animate(target: _hasError ? 1 : 0).shakeX(hz: 8, amount: 5),
                   ),
-                ),
+                ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, curve: Curves.easeOut),
               ),
             ),
           ),

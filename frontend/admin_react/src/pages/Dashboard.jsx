@@ -36,6 +36,7 @@ export default function Dashboard() {
         total_disbursed: 0,
         applications: []
     });
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         // Fetch dashboard stats from API
@@ -55,6 +56,8 @@ export default function Dashboard() {
                 });
             } catch (err) {
                 console.error("Failed to fetch dashboard stats", err);
+            } finally {
+                setLoading(false);
             }
         };
 
@@ -136,27 +139,54 @@ export default function Dashboard() {
                 </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
-                <StatCard title="Total Disbursed" value={formatCurrency(stats.total_disbursed || 14500000)} icon={Wallet} color="var(--primary)" bg="rgba(42, 75, 155, 0.1)" />
-                <StatCard title="Active Applications" value={stats.total_loans || 124} icon={Activity} color="var(--accent)" bg="rgba(255, 122, 0, 0.1)" />
-                <StatCard title="Approved Loans" value={stats.approved_loans || 86} icon={CreditCard} color="var(--success)" bg="rgba(16, 185, 129, 0.1)" />
-                <StatCard title="Approval Rate" value={stats.total_loans ? Math.round((stats.approved_loans / stats.total_loans) * 100) + '%' : '68%'} icon={TrendingUp} color="var(--accent-teal)" bg="rgba(0, 176, 168, 0.1)" />
-            </div>
+            {loading ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+                    {[1, 2, 3, 4].map(i => (
+                        <div key={i} className="card dash-card" style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '20px' }}>
+                            <div className="skeleton" style={{ width: '56px', height: '56px', borderRadius: '12px' }}></div>
+                            <div style={{ flex: 1 }}>
+                                <div className="skeleton" style={{ width: '60%', height: '14px', marginBottom: '12px' }}></div>
+                                <div className="skeleton" style={{ width: '80%', height: '24px' }}></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+                    <StatCard title="Total Disbursed" value={formatCurrency(stats.total_disbursed || 14500000)} icon={Wallet} color="var(--primary)" bg="rgba(42, 75, 155, 0.1)" />
+                    <StatCard title="Active Applications" value={stats.total_loans || 124} icon={Activity} color="var(--accent)" bg="rgba(255, 122, 0, 0.1)" />
+                    <StatCard title="Approved Loans" value={stats.approved_loans || 86} icon={CreditCard} color="var(--success)" bg="rgba(16, 185, 129, 0.1)" />
+                    <StatCard title="Approval Rate" value={stats.total_loans ? Math.round((stats.approved_loans / stats.total_loans) * 100) + '%' : '68%'} icon={TrendingUp} color="var(--accent-teal)" bg="rgba(0, 176, 168, 0.1)" />
+                </div>
+            )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
-                <div className="card dash-chart" style={{ padding: '24px' }}>
-                    <h3 style={{ marginBottom: '24px' }}>Disbursements Overview</h3>
-                    <div style={{ height: '300px' }}>
-                        <Line data={lineChartData} options={{ responsive: true, maintainAspectRatio: false }} />
+            {loading ? (
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+                    <div className="card dash-chart" style={{ padding: '24px', height: '380px' }}>
+                        <div className="skeleton" style={{ width: '200px', height: '24px', marginBottom: '24px' }}></div>
+                        <div className="skeleton" style={{ width: '100%', height: '280px', borderRadius: '8px' }}></div>
+                    </div>
+                    <div className="card dash-chart" style={{ padding: '24px', height: '380px' }}>
+                        <div className="skeleton" style={{ width: '150px', height: '24px', marginBottom: '24px' }}></div>
+                        <div className="skeleton" style={{ width: '100%', height: '280px', borderRadius: '50%' }}></div>
                     </div>
                 </div>
-                <div className="card dash-chart" style={{ padding: '24px' }}>
-                    <h3 style={{ marginBottom: '24px' }}>Application Status</h3>
-                    <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Doughnut data={doughnutData} options={{ responsive: true, maintainAspectRatio: false, cutout: '75%' }} />
+            ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+                    <div className="card dash-chart" style={{ padding: '24px' }}>
+                        <h3 style={{ marginBottom: '24px' }}>Disbursements Overview</h3>
+                        <div style={{ height: '300px' }}>
+                            <Line data={lineChartData} options={{ responsive: true, maintainAspectRatio: false }} />
+                        </div>
+                    </div>
+                    <div className="card dash-chart" style={{ padding: '24px' }}>
+                        <h3 style={{ marginBottom: '24px' }}>Application Status</h3>
+                        <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Doughnut data={doughnutData} options={{ responsive: true, maintainAspectRatio: false, cutout: '75%' }} />
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }

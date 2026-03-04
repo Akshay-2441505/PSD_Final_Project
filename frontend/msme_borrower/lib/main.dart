@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'core/constants.dart';
 import 'core/auth_provider.dart';
 import 'screens/login_screen.dart';
-import 'screens/dashboard_screen.dart';
+import 'screens/main_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,7 +25,7 @@ class MyApp extends StatelessWidget {
       theme: buildAppTheme(),
       home: Consumer<AuthProvider>(
         builder: (_, auth, __) =>
-            auth.isLoggedIn ? const DashboardScreen() : const LoginScreen(),
+            auth.isLoggedIn ? const MainShell() : const LoginScreen(),
       ),
     );
   }

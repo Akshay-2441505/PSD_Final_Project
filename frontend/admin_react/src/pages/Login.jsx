@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import api from '../core/api';
+import { useToast } from '../components/ToastProvider';
 
 export default function Login() {
     const containerRef = useRef(null);
@@ -12,6 +13,7 @@ export default function Login() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const { addToast } = useToast();
 
     useEffect(() => {
         const tl = gsap.timeline();
@@ -25,19 +27,16 @@ export default function Login() {
         setError('');
         setLoading(true);
         try {
-            const formData = new URLSearchParams();
-            formData.append('username', email);
-            formData.append('password', password);
-
-            const res = await api.post('/auth/token', formData, {
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                }
+            const res = await api.post('/auth/admin/login', {
+                email: email,
+                password: password
             });
             localStorage.setItem('adminToken', res.data.access_token);
+            addToast('Successfully authenticated', 'success');
             navigate('/dashboard');
         } catch (err) {
             setError(err.response?.data?.detail || 'Login failed');
+            addToast(err.response?.data?.detail || 'Login failed', 'error');
         } finally {
             setLoading(false);
         }

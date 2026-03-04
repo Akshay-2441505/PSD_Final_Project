@@ -4,6 +4,7 @@ import gsap from 'gsap';
 import { Line } from 'react-chartjs-2';
 import api from '../core/api';
 import { ArrowLeft, User, Building2, MapPin, Briefcase, FileText, CheckCircle, XCircle } from 'lucide-react';
+import { useToast } from '../components/ToastProvider';
 
 export default function ApplicationDetail() {
     const { id } = useParams();
@@ -12,6 +13,7 @@ export default function ApplicationDetail() {
     const [app, setApp] = useState(null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const { addToast } = useToast();
 
     useEffect(() => {
         const fetchDetail = async () => {
@@ -56,8 +58,10 @@ export default function ApplicationDetail() {
             // Re-fetch
             const res = await api.get(`/admin/applications/${id}`);
             setApp(res.data);
+            addToast(`Successfully ${status.toLowerCase()} application`, status === 'APPROVED' ? 'success' : 'info');
         } catch (err) {
             console.error(`Failed to ${status.toLowerCase()} app`, err);
+            addToast(`Failed to ${status.toLowerCase()} application`, 'error');
         } finally {
             setSubmitting(false);
         }

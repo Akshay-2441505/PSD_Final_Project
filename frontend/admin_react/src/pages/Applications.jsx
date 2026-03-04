@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import api from '../core/api';
-import { MoreVertical, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { MoreVertical, CheckCircle, XCircle, Clock, Inbox } from 'lucide-react';
 
 export default function Applications() {
     const containerRef = useRef(null);
@@ -54,7 +54,15 @@ export default function Applications() {
             </div>
 
             {loading ? (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '48px' }}>Loading...</div>
+                <div style={{ display: 'flex', gap: '24px', overflowX: 'auto', paddingBottom: '16px', flex: 1 }}>
+                    {columns.map(col => (
+                        <div key={col.id} className="card kanban-col" style={{ flex: '0 0 320px', backgroundColor: '#F8FAFC', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', border: 'none', boxShadow: 'none' }}>
+                            <div className="skeleton" style={{ width: '140px', height: '24px', borderRadius: '4px' }}></div>
+                            <div className="skeleton" style={{ height: '140px', width: '100%', borderRadius: '12px' }}></div>
+                            <div className="skeleton" style={{ height: '140px', width: '100%', borderRadius: '12px' }}></div>
+                        </div>
+                    ))}
+                </div>
             ) : (
                 <div style={{ display: 'flex', gap: '24px', overflowX: 'auto', paddingBottom: '16px', flex: 1 }}>
                     {columns.map(col => {
@@ -104,8 +112,12 @@ export default function Applications() {
                                         </div>
                                     ))}
                                     {columnApps.length === 0 && (
-                                        <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', border: '1px dashed #CBD5E1', borderRadius: '8px' }}>
-                                            No applications
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', textAlign: 'center', border: '1px dashed #CBD5E1', borderRadius: '12px', backgroundColor: 'var(--surface)' }}>
+                                            <div style={{ backgroundColor: '#F1F5F9', padding: '16px', borderRadius: '50%', marginBottom: '16px' }}>
+                                                <Inbox size={28} color="var(--text-muted)" />
+                                            </div>
+                                            <p style={{ margin: 0, fontWeight: '500', color: 'var(--text-dark)' }}>No applications</p>
+                                            <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>This queue is currently empty.</p>
                                         </div>
                                     )}
                                 </div>

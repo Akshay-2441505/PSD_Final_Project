@@ -26,6 +26,7 @@ class _LoanApplyScreenState extends State<LoanApplyScreen> {
   bool   _hasActiveLoan  = false; // true if borrower already has an approved loan
   String? _activeLoanId;
   double? _activeLoanAmount;
+  bool   _hasError       = false;
 
   final List<Map<String,String>> _purposes = [
     {'value': 'WORKING_CAPITAL',   'label': 'Working Capital'},
@@ -101,7 +102,13 @@ class _LoanApplyScreenState extends State<LoanApplyScreen> {
 
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      setState(() => _hasError = true);
+      Future.delayed(const Duration(milliseconds: 600), () {
+        if (mounted) setState(() => _hasError = false);
+      });
+      return;
+    }
     setState(() => _loading = true);
     try {
       final token = context.read<AuthProvider>().token!;
@@ -459,7 +466,7 @@ class _LoanApplyScreenState extends State<LoanApplyScreen> {
           ).animate(delay: 500.ms).fadeIn(),
           const SizedBox(height: 48),
         ]),
-      ),
+      ).animate(target: _hasError ? 1 : 0).shakeX(amount: 4, hz: 8),
     );
   }
 
