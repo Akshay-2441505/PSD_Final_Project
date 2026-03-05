@@ -11,28 +11,29 @@ export default function Borrowers() {
     useEffect(() => {
         const fetchBorrowers = async () => {
             try {
-                // We simulate fetching a users list by pulling applications and extracting unique owners
-                // In a real app, this would hit a specific /admin/users endpoint.
                 const res = await api.get('/admin/applications');
 
-                // Mock reduction to unique users (Borrowers)
+                // Group by business_id (unique per borrower)
                 const uniqueUsers = {};
                 res.data.forEach(app => {
-                    if (!uniqueUsers[app.owner_email]) {
-                        uniqueUsers[app.owner_email] = {
-                            id: app.owner_id || Math.random().toString(36).substr(2, 9),
-                            name: app.business_name || 'Unknown Business',
-                            email: app.owner_email,
-                            phone: '+91 ' + (Math.floor(Math.random() * 9000000000) + 1000000000).toString(),
-                            totalDisbursed: app.status === 'Approved' ? app.requested_amount : 0,
-                            activeLoans: app.status === 'Approved' ? 1 : 0,
-                            riskScore: app.ai_risk_score,
-                            joinDate: new Date(app.created_at || Date.now() - 86400000 * 30).toLocaleDateString()
+                    const key = app.business_id || app.app_id;
+                    if (!uniqueUsers[key]) {
+                        uniqueUsers[key] = {
+                            id: app.business_id || app.app_id,
+                            shortId: (app.business_id || app.app_id || '').toString().slice(-8),
+                            name: app.legal_name || app.owner_name || 'Unknown Business',
+                            ownerName: app.owner_name || '',
+                            email: app.email || '—',
+                            phone: app.phone || '—',
+                            totalDisbursed: app.status === 'APPROVED' ? (app.requested_amount || 0) : 0,
+                            activeLoans: app.status === 'APPROVED' ? 1 : 0,
+                            riskScore: app.risk_score,
+                            joinDate: new Date(app.created_at || Date.now()).toLocaleDateString('en-IN'),
                         };
                     } else {
-                        if (app.status === 'Approved') {
-                            uniqueUsers[app.owner_email].totalDisbursed += app.requested_amount;
-                            uniqueUsers[app.owner_email].activeLoans += 1;
+                        if (app.status === 'APPROVED') {
+                            uniqueUsers[key].totalDisbursed += (app.requested_amount || 0);
+                            uniqueUsers[key].activeLoans += 1;
                         }
                     }
                 });

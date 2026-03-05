@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
+import '../core/auth_provider.dart';
 import '../core/constants.dart';
 import 'dart:math';
 
@@ -27,6 +29,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Derive a short display name: prefer owner_name, fall back to first word of company name
+    final profile = context.watch<AuthProvider>().profile;
+    final ownerName   = profile?['owner_name']  as String? ?? '';
+    final legalName   = profile?['legal_name']  as String? ?? '';
+    final displayName = ownerName.isNotEmpty
+        ? ownerName.split(' ').first
+        : legalName.isNotEmpty
+            ? legalName.split(' ').first
+            : 'there';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('LendingKart MSME'),
@@ -40,9 +52,11 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Hero Section
-            Text('Hello, Acme Mfg.', style: kHeading1(context).copyWith(fontSize: 28, color: kPrimary)),
+            Text('Hello, $displayName!',
+                style: kHeading1(context).copyWith(fontSize: 28, color: kPrimary)),
             const SizedBox(height: 8),
-            Text('Calculate your EMI and apply instantly.', style: TextStyle(fontSize: 16, color: kTextDark)),
+            Text('Calculate your EMI and apply instantly.',
+                style: TextStyle(fontSize: 16, color: kTextDark)),
             const SizedBox(height: 24),
             
             // EMI Calculator Card
@@ -100,7 +114,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     onChanged: (val) => setState(() => _tenureMonths = val),
                   ),
                   const SizedBox(height: 24),
-                  
                   // Result Area
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -130,24 +143,60 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  
-                  // Apply Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: widget.onApplyRequested,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: kAccent,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      child: const Text('Apply Now', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                    ),
-                  )
                 ],
               ),
             ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, duration: 400.ms),
+
+            const SizedBox(height: 24),
+
+            // ── Apply Now — separate from the EMI Calculator ───────────────
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [kPrimary, kPrimary.withOpacity(0.8)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(color: kPrimary.withOpacity(0.3), blurRadius: 16, offset: const Offset(0, 6)),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Ready to Apply?',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Get funds in your account within 48 hours.',
+                          style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.85)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  ElevatedButton(
+                    onPressed: widget.onApplyRequested,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kAccent,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      elevation: 0,
+                    ),
+                    child: const Text('Apply Now',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ).animate().fadeIn(delay: 200.ms, duration: 400.ms).slideY(begin: 0.08, duration: 400.ms),
             
             const SizedBox(height: 32),
             

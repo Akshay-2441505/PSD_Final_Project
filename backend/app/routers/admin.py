@@ -91,15 +91,18 @@ def get_application_detail(
     db: Session = Depends(get_db),
     admin: AdminUser = Depends(get_current_admin),
 ):
-    """Full detail of one loan application including borrower profile and bank statement."""
-    result = db.query(LoanApplication, BorrowerProfile).join(
-        BorrowerProfile, LoanApplication.business_id == BorrowerProfile.business_id
-    ).filter(LoanApplication.app_id == app_id).first()
-
-    if not result:
+    """Full detail of one loan application including borrower profile."""
+    # Two separate queries instead of a JOIN — more reliable with PgBouncer
+    loan = db.query(LoanApplication).filter(LoanApplication.app_id == app_id).first()
+    if not loan:
         raise HTTPException(status_code=404, detail="Application not found")
 
-    loan, borrower = result
+    borrower = db.query(BorrowerProfile).filter(
+        BorrowerProfile.business_id == loan.business_id
+    ).first()
+    if not borrower:
+        raise HTTPException(status_code=404, detail="Borrower profile not found")
+
     return AdminApplicationDetail(
         app_id=loan.app_id,
         business_id=loan.business_id,
@@ -111,6 +114,8 @@ def get_application_detail(
         status=loan.status,
         risk_score=loan.risk_score,
         risk_flags=loan.risk_flags or [],
+        score_breakdown=loan.score_breakdown or [],
+        repayment_schedule=loan.repayment_schedule,
         admin_remarks=loan.admin_remarks,
         bank_statement_data=loan.bank_statement_data,
         created_at=loan.created_at,

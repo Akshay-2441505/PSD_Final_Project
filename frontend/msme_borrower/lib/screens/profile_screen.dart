@@ -9,6 +9,16 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Read real profile data from AuthProvider — populated on login via /profile endpoint
+    final profile = context.watch<AuthProvider>().profile;
+
+    final businessName = profile?['legal_name']  as String? ?? 'My Business';
+    final ownerName    = profile?['owner_name']   as String? ?? '';
+    final email        = profile?['email']        as String? ?? '—';
+    final phone        = profile?['phone']        as String? ?? '—';
+    final gstin        = profile?['gstin']        as String? ?? 'Not provided';
+    final businessType = profile?['business_type'] as String? ?? 'MSME Business';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Profile'),
@@ -17,19 +27,31 @@ class ProfileScreen extends StatelessWidget {
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
-            const CircleAvatar(
+            // Avatar with first letter of business name
+            CircleAvatar(
               radius: 50,
               backgroundColor: kAccent,
-              child: Icon(Icons.business_center, size: 50, color: Colors.white),
+              child: Text(
+                businessName.isNotEmpty ? businessName[0].toUpperCase() : 'B',
+                style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
             ),
             const SizedBox(height: 16),
             Text(
-              'Acme Manufacturing Co.',
+              businessName,
               style: kHeading1(context).copyWith(fontSize: 24),
+              textAlign: TextAlign.center,
             ),
+            if (ownerName.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                ownerName,
+                style: kCaption(context).copyWith(fontSize: 14),
+              ),
+            ],
             const SizedBox(height: 8),
             Text(
-              'MSME Priority Business',
+              businessType,
               style: kCaption(context).copyWith(color: kAccent, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 32),
@@ -37,21 +59,21 @@ class ProfileScreen extends StatelessWidget {
               context,
               icon: Icons.confirmation_number_outlined,
               title: 'GSTIN',
-              value: '22AAAAA0000A1Z5',
+              value: gstin,
             ),
             const SizedBox(height: 16),
             _buildInfoCard(
               context,
               icon: Icons.email_outlined,
               title: 'Registered Email',
-              value: 'contact@acmemfg.in',
+              value: email,
             ),
             const SizedBox(height: 16),
             _buildInfoCard(
               context,
               icon: Icons.phone_outlined,
               title: 'Phone Number',
-              value: '+91 98765 43210',
+              value: phone.startsWith('+') ? phone : '+91 $phone',
             ),
             const SizedBox(height: 48),
             SizedBox(
@@ -59,7 +81,8 @@ class ProfileScreen extends StatelessWidget {
               height: 50,
               child: OutlinedButton.icon(
                 icon: const Icon(Icons.logout, color: Colors.red),
-                label: const Text('Logout', style: TextStyle(color: Colors.red, fontSize: 16, fontWeight: FontWeight.bold)),
+                label: const Text('Logout',
+                    style: TextStyle(color: Colors.red, fontSize: 16, fontWeight: FontWeight.bold)),
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: Colors.red),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -80,13 +103,16 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoCard(BuildContext context, {required IconData icon, required String title, required String value}) {
+  Widget _buildInfoCard(BuildContext context,
+      {required IconData icon, required String title, required String value}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))
+        ],
       ),
       child: Row(
         children: [
@@ -99,13 +125,17 @@ class ProfileScreen extends StatelessWidget {
             child: Icon(icon, color: kPrimary),
           ),
           const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: kCaption(context)),
-              const SizedBox(height: 4),
-              Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: kTextDark)),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: kCaption(context)),
+                const SizedBox(height: 4),
+                Text(value,
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600, color: kTextDark)),
+              ],
+            ),
           )
         ],
       ),

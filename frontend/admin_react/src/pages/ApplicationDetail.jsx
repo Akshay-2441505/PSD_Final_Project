@@ -449,16 +449,27 @@ export default function ApplicationDetail() {
                             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                                 <thead>
                                     <tr style={{ borderBottom: '2px solid #E2E8F0', color: 'var(--text-muted)', fontSize: '0.85rem', textTransform: 'uppercase' }}>
-                                        <th style={{ padding: '10px 8px' }}>Category</th>
-                                        <th style={{ padding: '10px 8px' }}>Reason</th>
+                                        <th style={{ padding: '10px 8px' }}>Rule</th>
+                                        <th style={{ padding: '10px 8px' }}>Explanation</th>
                                         <th style={{ padding: '10px 8px', textAlign: 'right' }}>Impact</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {app.score_breakdown.map((item, idx) => (
                                         <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                                            <td style={{ padding: '14px 8px', fontWeight: '600', fontSize: '0.9rem' }}>{item.category}</td>
-                                            <td style={{ padding: '14px 8px', color: 'var(--text-muted)', fontSize: '0.88rem' }}>{item.reason}</td>
+                                            <td style={{ padding: '14px 8px', fontSize: '0.9rem' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <div style={{
+                                                        width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
+                                                        backgroundColor: item.severity === 'high' ? 'var(--error)'
+                                                            : item.severity === 'medium' ? 'var(--warning)'
+                                                                : item.severity === 'low' ? '#F59E0B'
+                                                                    : 'var(--success)',
+                                                    }} />
+                                                    <strong>{item.rule || item.category || '—'}</strong>
+                                                </div>
+                                            </td>
+                                            <td style={{ padding: '14px 8px', color: 'var(--text-muted)', fontSize: '0.85rem', maxWidth: '320px', lineHeight: 1.5 }}>{item.detail || item.reason || '—'}</td>
                                             <td style={{
                                                 padding: '14px 8px', textAlign: 'right', fontWeight: 'bold',
                                                 color: item.impact >= 0 ? 'var(--success)' : 'var(--error)',
